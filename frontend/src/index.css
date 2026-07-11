@@ -1,0 +1,28 @@
+/*
+TODO: Design System & Styling Guide (Vanilla CSS)
+Use custom CSS properties (variables) to build a rich, premium, responsive layout.
+Do NOT use TailwindCSS unless explicitly requested.
+
+1. CSS Variables to Define in Root:
+   - Colors: Primary (Deep indigo/violet), Secondary (Cyan/teal), Background (Sleek dark background #0f172a / slate-900), Surface (Glassmorphic cards #1e293b), Border (#334155), Text (#f8fafc), Muted Text (#94a3b8)
+   - Accents: Success green, Warning amber, Danger/Error red, Sentiment colors (Angry, Neutral, Happy)
+   - Shadows: Soft custom box-shadows for cards.
+   - Borders: Border-radius variables (8px, 12px, 20px).
+
+2. Global Reset:
+   - Box-sizing: border-box
+   - Font family: Inter, Roboto, sans-serif
+   - Smooth scroll behavior.
+
+3. Glassmorphism Utilities:
+   - Cards should have a translucent background: rgba(30, 41, 59, 0.7)
+   - Backdrop-filter: blur(12px)
+   - Sleek linear-gradient border: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))
+
+4. Micro-Animations:
+   - Define hover keyframes and transitions (e.g. scale-up on card hover, border glow on input focus, rotation for loading spinners, smooth fade-in/slide-in for chat messages).
+
+5. Responsive Layout:
+   - Use Flexbox and CSS Grid (grid-template-columns) with minmax.
+   - Responsive breakpoints: Mobile (< 640px), Tablet (< 1024px), Desktop (> 1024px).
+*/
