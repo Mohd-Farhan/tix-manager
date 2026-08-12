@@ -1,23 +1,32 @@
 {
-  "//_comment_1": "TODO: Frontend Dependencies and Scripts Configuration",
-  "//_comment_2": "Use React + Vite with the following dependencies for Phase 1:",
-  
-  "//_dependencies_instructions": {
-    "react": "^18.x (or 19.x)",
-    "react-dom": "^18.x",
-    "react-router-dom": "^6.x (For page routing and route protection)",
-    "axios": "^1.x (For HTTP API communication with Spring Boot backend)",
-    "lucide-react": "^0.x (For sleek UI vector icons)"
+  "name": "tixmanager",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
   },
-  
-  "//_devDependencies_instructions": {
-    "vite": "^5.x",
-    "@vitejs/plugin-react": "^4.x"
+  "private": true,
+  "packageManager": "npm@11.17.0",
+  "dependencies": {
+    "@angular/common": "^22.1.0",
+    "@angular/compiler": "^22.1.0",
+    "@angular/core": "^22.1.0",
+    "@angular/forms": "^22.1.0",
+    "@angular/platform-browser": "^22.1.0",
+    "@angular/router": "^22.1.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
   },
-  
-  "//_scripts_instructions": {
-    "dev": "vite (Start development server locally on http://localhost:5173)",
-    "build": "vite build (Compile production bundle)",
-    "preview": "vite preview (Preview local production build)"
+  "devDependencies": {
+    "@angular/build": "^22.1.3",
+    "@angular/cli": "^22.1.3",
+    "@angular/compiler-cli": "^22.1.0",
+    "jsdom": "^28.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.0.8"
   }
 }

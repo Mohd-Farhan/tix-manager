@@ -1,6 +1,10 @@
 package com.support.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.hibernate.annotations.SQLRestriction;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -11,6 +15,7 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@SQLRestriction("deleted = false")
 public class Ticket {
 
     @Id
@@ -45,15 +50,21 @@ public class Ticket {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<TicketStatusHistory> statusHistory = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
-        if (status == null) status = TicketStatus.OPEN;
-        if (priority == null) priority = TicketPriority.MEDIUM;
+        if (status == null)
+            status = TicketStatus.OPEN;
+        if (priority == null)
+            priority = TicketPriority.MEDIUM;
         createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
