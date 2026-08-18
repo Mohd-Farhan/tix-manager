@@ -1,1 +1,187 @@
-/* You can add global styles to this file, and also import other style files */
+/* ================================================================
+   TixManager — Global Design System
+   Azure Professional Narrative Color Palette
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ---- CSS Reset ---- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  min-height: 100dvh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+button, input, textarea, select {
+  font: inherit;
+  color: inherit;
+  border: none;
+  outline: none;
+  background: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* ================================================================
+   Light Mode Tokens (default)
+   ================================================================ */
+:root {
+  --background: #f7f9fb;
+  --on-background: #191c1e;
+  --surface: #f7f9fb;
+  --surface-dim: #d8dadc;
+  --surface-bright: #ffffff;
+  --surface-variant: #e0e3e5;
+  --on-surface: #191c1e;
+  --on-surface-variant: #45464d;
+  --inverse-surface: #2d3133;
+  --inverse-on-surface: #eff1f3;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f2f4f6;
+  --surface-container: #eceef0;
+  --surface-container-high: #e6e8ea;
+  --surface-container-highest: #e0e3e5;
+  --outline: #76777d;
+  --outline-variant: #c6c6cd;
+  --surface-tint: #0058be;
+  --primary: #0a192f;
+  --on-primary: #ffffff;
+  --primary-container: #13284c;
+  --on-primary-container: #dbe7ff;
+  --inverse-primary: #adc6ff;
+  --secondary: #0058be;
+  --on-secondary: #ffffff;
+  --secondary-container: #2170e4;
+  --on-secondary-container: #fefcff;
+  --tertiary: #4b88d4;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #dce8f9;
+  --on-tertiary-container: #0c2e59;
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+
+  --blue-900: #0a192f;
+  --blue-800: #003375;
+  --blue-700: #004da8;
+  --blue-600: #0058be;
+  --blue-500: #2170e4;
+  --blue-400: #4b88d4;
+  --blue-300: #79abeb;
+  --blue-200: #adc6ff;
+  --blue-100: #dce8f9;
+  --blue-50: #f0f5fd;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(10, 25, 47, 0.06), 0 1px 2px rgba(10, 25, 47, 0.04);
+  --shadow-md: 0 4px 12px rgba(10, 25, 47, 0.08), 0 2px 4px rgba(10, 25, 47, 0.04);
+  --shadow-lg: 0 12px 40px rgba(10, 25, 47, 0.12), 0 4px 12px rgba(10, 25, 47, 0.06);
+  --shadow-xl: 0 24px 64px rgba(10, 25, 47, 0.16), 0 8px 20px rgba(10, 25, 47, 0.08);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ================================================================
+   Dark Mode Tokens
+   ================================================================ */
+:root[data-theme="dark"] {
+  --background: #070d18;
+  --on-background: #e0e3e5;
+  --surface: #0a1220;
+  --surface-dim: #070d18;
+  --surface-bright: #172338;
+  --surface-variant: #1e2b40;
+  --on-surface: #e0e3e5;
+  --on-surface-variant: #a0a8b8;
+  --inverse-surface: #e0e3e5;
+  --inverse-on-surface: #191c1e;
+  --surface-container-lowest: #050a12;
+  --surface-container-low: #0e1726;
+  --surface-container: #131f33;
+  --surface-container-high: #1a2942;
+  --surface-container-highest: #223452;
+  --outline: #58627a;
+  --outline-variant: #29354d;
+  --surface-tint: #79abeb;
+  --primary: #adc6ff;
+  --on-primary: #002e69;
+  --primary-container: #004395;
+  --on-primary-container: #d8e2ff;
+  --inverse-primary: #0a192f;
+  --secondary: #79abeb;
+  --on-secondary: #002f6c;
+  --secondary-container: #004da8;
+  --on-secondary-container: #d8e2ff;
+  --tertiary: #9ecaff;
+  --on-tertiary: #003258;
+  --tertiary-container: #1b4873;
+  --on-tertiary-container: #d1e4ff;
+  --error: #ffb4ab;
+  --on-error: #690005;
+  --error-container: #93000a;
+  --on-error-container: #ffdad6;
+
+  --blue-900: #070d18;
+  --blue-800: #0d1d36;
+  --blue-700: #142c52;
+  --blue-600: #1b3e73;
+  --blue-500: #25579d;
+  --blue-400: #3d7cd4;
+  --blue-300: #6ea8f7;
+  --blue-200: #9ecaff;
+  --blue-100: #cbe0ff;
+  --blue-50: #eef5ff;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ---- Body styling ---- */
+body {
+  background-color: var(--background);
+  color: var(--on-background);
+}

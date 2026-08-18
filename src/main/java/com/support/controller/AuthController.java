@@ -1,12 +1,19 @@
 package com.support.controller;
 
+import com.support.dto.LoginDTO;
 import com.support.dto.UserDTO;
+import com.support.security.JwtService;
+import com.support.security.UserDetailsImpl;
 import com.support.service.UserService;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,6 +23,12 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private JwtService jwtService;
+
     @PostMapping("/register")
     public ResponseEntity<UserDTO> registerUser(@Valid @RequestBody UserDTO userDto) {
         UserDTO createdUser = userService.registerUser(userDto);
@@ -23,7 +36,33 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@Valid @RequestBody UserDTO loginDto) {
-        return null;
+    public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO) {
+        try {
+            // Step 1: Authenticate the user's credentials
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginDTO.getUsername(),
+                            loginDTO.getPassword()));
+
+            // Step 2: Extract authenticated user details
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+            // Step 3: Generate JWT token
+            String token = jwtService.generateToken(userDetails);
+
+            // Step 4: Build and return the response
+            LoginDTO response = LoginDTO.builder()
+                    .username(userDetails.getUsername())
+                    .password(null) // don't send password back
+                    .token(token)
+                    .role(userDetails.getUser().getRole())
+                    .build();
+
+            return ResponseEntity.ok(response);
+
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
+        }
     }
 }
+
