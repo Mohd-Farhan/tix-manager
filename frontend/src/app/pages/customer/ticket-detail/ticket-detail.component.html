@@ -1,0 +1,119 @@
+@if (notFound) {
+<div class="not-found">
+  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+  </svg>
+  <h2>Ticket not found</h2>
+  <p>The ticket you're looking for doesn't exist or has been removed.</p>
+  <a routerLink="/customer/tickets" class="btn-back">Back to Tickets</a>
+</div>
+} @else if (ticket) {
+<div class="ticket-detail">
+  <!-- Back -->
+  <a routerLink="/customer/tickets" class="back-link" id="detail-back">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+    </svg>
+    <span>Back to Tickets</span>
+  </a>
+
+  <div class="detail-grid">
+    <!-- Main Column: Chat -->
+    <div class="main-col">
+      <!-- Ticket Header -->
+      <div class="ticket-header-card">
+        <div class="ticket-header-top">
+          <span class="ticket-id">#{{ ticket.id }}</span>
+          <div class="ticket-badges">
+            <span class="badge" [ngClass]="getStatusClass(ticket.status)">{{ getStatusLabel(ticket.status) }}</span>
+            <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">{{ ticket.priority }}</span>
+          </div>
+        </div>
+        <h1 class="ticket-title">{{ ticket.title }}</h1>
+        <p class="ticket-desc">{{ ticket.description }}</p>
+      </div>
+
+      <!-- Chat Thread -->
+      <div class="chat-section">
+        <h2 class="chat-heading">Conversation</h2>
+        <div class="chat-container" #chatContainer>
+          @if (messages.length === 0) {
+          <div class="chat-empty">
+            <p>No messages yet. Start the conversation below.</p>
+          </div>
+          } @else {
+            @for (msg of messages; track msg.id) {
+            <div class="message" [class.own]="msg.senderId === currentUserId">
+              <div class="message-avatar">{{ msg.senderUsername.charAt(0).toUpperCase() }}</div>
+              <div class="message-body">
+                <div class="message-meta">
+                  <span class="message-sender">{{ msg.senderUsername }}</span>
+                  <span class="message-time">{{ formatDateTime(msg.createdAt) }}</span>
+                </div>
+                <div class="message-content">{{ msg.content }}</div>
+              </div>
+            </div>
+            }
+          }
+        </div>
+
+        <!-- Input -->
+        <div class="chat-input-wrap">
+          <textarea class="chat-input" [(ngModel)]="newMessage" (keydown)="onKeyDown($event)"
+            placeholder="Type your message..." rows="2" id="chat-input"></textarea>
+          <button class="send-btn" (click)="sendMessage()" [disabled]="!newMessage.trim()" id="chat-send-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side Column: Info -->
+    <aside class="side-col">
+      <!-- Ticket Info -->
+      <div class="info-card">
+        <h3 class="info-card-title">Ticket Details</h3>
+        <div class="info-row">
+          <span class="info-label">Created</span>
+          <span class="info-value">{{ formatDate(ticket.createdAt) }}</span>
+        </div>
+        @if (ticket.updatedAt) {
+        <div class="info-row">
+          <span class="info-label">Last Updated</span>
+          <span class="info-value">{{ formatDate(ticket.updatedAt) }}</span>
+        </div>
+        }
+        <div class="info-row">
+          <span class="info-label">Assigned To</span>
+          <span class="info-value">{{ ticket.assignedAgentName ?? 'Unassigned' }}</span>
+        </div>
+      </div>
+
+      <!-- Status History -->
+      @if (ticket.history && ticket.history.length > 0) {
+      <div class="info-card">
+        <h3 class="info-card-title">Status History</h3>
+        <div class="timeline">
+          @for (entry of ticket.history; track entry.id) {
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+              <span class="timeline-status">
+                {{ getStatusLabel(entry.previousStatus) }} → {{ getStatusLabel(entry.newStatus) }}
+              </span>
+              <span class="timeline-meta">by {{ entry.changedByUsername }} · {{ formatDateTime(entry.changedAt) }}</span>
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+      }
+    </aside>
+  </div>
+</div>
+}

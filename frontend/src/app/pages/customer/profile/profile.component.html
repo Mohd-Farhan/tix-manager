@@ -1,0 +1,116 @@
+<div class="profile-page">
+  <div class="page-header">
+    <h1 class="page-title">Profile & Preferences</h1>
+    <p class="page-subtitle">Manage your account settings and preferences</p>
+  </div>
+
+  <div class="profile-grid">
+    <!-- Left Col: Profile Card & Preferences -->
+    <div class="left-col">
+      <!-- Profile Card -->
+      <div class="profile-card" id="profile-section">
+        <div class="avatar-large">{{ getUserInitial() }}</div>
+        <h2 class="profile-name">{{ user.username }}</h2>
+        <p class="profile-email">{{ user.email }}</p>
+        <span class="role-badge">{{ getRoleLabel(user.role) }}</span>
+        <div class="member-since">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Member since {{ formatDate(user.createdAt) }}
+        </div>
+      </div>
+
+      <!-- Theme & Preferences -->
+      <div class="settings-card" id="preferences-section">
+        <h3 class="card-title">Preferences</h3>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="setting-label">Dark Mode</span>
+            <span class="setting-desc">Switch between light and dark themes</span>
+          </div>
+          <button class="toggle-switch" [class.on]="isDark" (click)="toggleTheme()" id="profile-theme-toggle">
+            <div class="toggle-knob"></div>
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="setting-label">Ticket Updates</span>
+            <span class="setting-desc">Email me when ticket status changes</span>
+          </div>
+          <button class="toggle-switch" [class.on]="emailOnStatusChange" (click)="emailOnStatusChange = !emailOnStatusChange">
+            <div class="toggle-knob"></div>
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="setting-label">Agent Replies</span>
+            <span class="setting-desc">Email me when an agent replies</span>
+          </div>
+          <button class="toggle-switch" [class.on]="emailOnReply" (click)="emailOnReply = !emailOnReply">
+            <div class="toggle-knob"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Col: Forms -->
+    <div class="right-col">
+      <!-- Personal Info (Readonly) -->
+      <div class="settings-card">
+        <h3 class="card-title">Personal Information</h3>
+        <p class="card-subtitle">Your personal details are managed by your organization administrator.</p>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-input readonly" [value]="user.username" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-input readonly" [value]="user.email" readonly />
+          </div>
+        </div>
+      </div>
+
+      <!-- Password Update -->
+      <div class="settings-card" id="password-section">
+        <h3 class="card-title">Change Password</h3>
+        <p class="card-subtitle">Update your password to keep your account secure.</p>
+
+        @if (passwordMessage) {
+        <div class="alert" [class.alert-error]="passwordError" [class.alert-success]="!passwordError">
+          {{ passwordMessage }}
+        </div>
+        }
+
+        <div class="form-group">
+          <label class="form-label">Current Password</label>
+          <input type="password" class="form-input" [(ngModel)]="currentPassword" placeholder="Enter current password" />
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" class="form-input" [(ngModel)]="newPassword" placeholder="Min 8 characters" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <input type="password" class="form-input" [(ngModel)]="confirmPassword" placeholder="Confirm new password" />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-submit" (click)="updatePassword()" id="profile-password-submit">Update Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

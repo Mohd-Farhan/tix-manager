@@ -1,0 +1,112 @@
+<div class="ticket-list">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">My Tickets</h1>
+      <p class="page-subtitle">{{ filteredTickets.length }} ticket{{ filteredTickets.length !== 1 ? 's' : '' }} found</p>
+    </div>
+    <button type="button" (click)="openCreateTicketModal()" class="btn-new-ticket" id="ticket-list-create">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <span>New Ticket</span>
+    </button>
+  </div>
+
+  <!-- Search & Controls -->
+  <div class="controls-bar">
+    <div class="search-wrap">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" class="search-input" placeholder="Search tickets..." [(ngModel)]="searchQuery"
+        (input)="onSearch()" id="ticket-list-search" />
+    </div>
+
+    <select class="sort-select" [ngModel]="sortBy" (ngModelChange)="setSort($event)" id="ticket-list-sort">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="priority">Priority (High → Low)</option>
+    </select>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="filter-tabs">
+    @for (filter of filters; track filter.key) {
+    <button class="filter-tab" [class.active]="activeFilter === filter.key"
+      (click)="setFilter(filter.key)" id="filter-{{ filter.key }}">
+      {{ filter.label }}
+      <span class="filter-count">{{ getFilterCount(filter.key) }}</span>
+    </button>
+    }
+  </div>
+
+  <!-- Ticket Cards -->
+  @if (pagedTickets.length === 0) {
+  <div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <p class="empty-title">No tickets found</p>
+    <p class="empty-subtitle">Try adjusting your search or filter criteria</p>
+  </div>
+  } @else {
+  <div class="tickets-list">
+    @for (ticket of pagedTickets; track ticket.id) {
+    <a [routerLink]="'/customer/tickets/' + ticket.id" class="ticket-card" id="ticket-card-{{ ticket.id }}">
+      <div class="ticket-card-header">
+        <span class="ticket-id">#{{ ticket.id }}</span>
+        <div class="ticket-badges">
+          <span class="badge" [ngClass]="getStatusClass(ticket.status)">{{ getStatusLabel(ticket.status) }}</span>
+          <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">{{ ticket.priority }}</span>
+        </div>
+      </div>
+      <h3 class="ticket-title">{{ ticket.title }}</h3>
+      <p class="ticket-desc">{{ ticket.description }}</p>
+      <div class="ticket-meta">
+        <span class="meta-date">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          {{ formatDate(ticket.createdAt) }}
+        </span>
+        @if (ticket.assignedAgentName) {
+        <span class="meta-agent">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          {{ ticket.assignedAgentName }}
+        </span>
+        }
+      </div>
+    </a>
+    }
+  </div>
+
+  <!-- Pagination -->
+  @if (totalPages > 1) {
+  <div class="pagination">
+    <button class="page-btn" (click)="prevPage()" [disabled]="page <= 1" id="page-prev">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Previous
+    </button>
+    <span class="page-info">Page {{ page }} of {{ totalPages }}</span>
+    <button class="page-btn" (click)="nextPage()" [disabled]="page >= totalPages" id="page-next">
+      Next
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+  </div>
+  }
+  }
+</div>

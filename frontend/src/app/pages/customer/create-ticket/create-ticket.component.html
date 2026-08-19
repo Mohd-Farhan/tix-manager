@@ -1,0 +1,92 @@
+<div class="create-ticket">
+  <div class="page-header">
+    <a routerLink="/customer/tickets" class="back-link" id="create-ticket-back">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+      </svg>
+      <span>Back to Tickets</span>
+    </a>
+    <h1 class="page-title">Create New Ticket</h1>
+    <p class="page-subtitle">Describe your issue and we'll get back to you as soon as possible</p>
+  </div>
+
+  @if (showSuccess) {
+  <div class="success-banner" id="create-ticket-success">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+    <div>
+      <strong>Ticket created successfully!</strong>
+      <span>Redirecting to your tickets...</span>
+    </div>
+  </div>
+  }
+
+  <form [formGroup]="ticketForm" (ngSubmit)="onSubmit()" class="ticket-form" id="create-ticket-form" novalidate>
+    <!-- Title -->
+    <div class="form-group" [class.has-error]="f['title'].touched && f['title'].invalid">
+      <label class="form-label" for="ticket-title">
+        Title
+        <span class="char-counter" [class.over]="titleLength > 100">{{ titleLength }}/100</span>
+      </label>
+      <input type="text" id="ticket-title" formControlName="title" class="form-input"
+        placeholder="Brief summary of your issue" maxlength="100" />
+      @if (f['title'].touched && f['title'].errors) {
+      <div class="field-error">
+        @if (f['title'].errors['required']) { <span>Title is required</span> }
+        @else if (f['title'].errors['maxlength']) { <span>Title cannot exceed 100 characters</span> }
+      </div>
+      }
+    </div>
+
+    <!-- Description -->
+    <div class="form-group" [class.has-error]="f['description'].touched && f['description'].invalid">
+      <label class="form-label" for="ticket-description">Description</label>
+      <textarea id="ticket-description" formControlName="description" class="form-textarea"
+        placeholder="Provide detailed information about your issue. Include steps to reproduce, expected behavior, and any relevant context."
+        rows="6"></textarea>
+      @if (f['description'].touched && f['description'].errors) {
+      <div class="field-error"><span>Description is required</span></div>
+      }
+    </div>
+
+    <!-- Priority -->
+    <div class="form-group">
+      <label class="form-label">Priority</label>
+      <div class="priority-group">
+        @for (p of priorities; track p.value) {
+        <label class="priority-option" [class.selected]="f['priority'].value === p.value"
+          [class.priority-low]="p.value === 'LOW'"
+          [class.priority-medium]="p.value === 'MEDIUM'"
+          [class.priority-high]="p.value === 'HIGH'">
+          <input type="radio" formControlName="priority" [value]="p.value" class="sr-only" />
+          <span class="priority-dot"></span>
+          <div class="priority-text">
+            <span class="priority-label">{{ p.label }}</span>
+            <span class="priority-desc">{{ p.description }}</span>
+          </div>
+        </label>
+        }
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="form-actions">
+      <a routerLink="/customer/tickets" class="btn-cancel" id="create-ticket-cancel">Cancel</a>
+      <button type="submit" class="btn-submit" id="create-ticket-submit" [disabled]="isLoading">
+        @if (isLoading) {
+        <div class="spinner"></div>
+        <span>Creating...</span>
+        } @else {
+        <span>Create Ticket</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+        </svg>
+        }
+      </button>
+    </div>
+  </form>
+</div>
