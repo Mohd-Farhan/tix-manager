@@ -1,0 +1,164 @@
+@if (notFound) {
+<div class="not-found-container fade-in">
+  <div class="empty-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  </div>
+  <h2>Ticket Not Found</h2>
+  <p>The ticket you are looking for does not exist or has been deleted.</p>
+  <a routerLink="/agent/tickets" class="btn-primary mt-4">Return to Queue</a>
+</div>
+} @else if (ticket) {
+<div class="ticket-detail-layout fade-in">
+  
+  <!-- Left Column: Chat Area -->
+  <div class="chat-column">
+    <!-- Header -->
+    <div class="chat-header">
+      <a routerLink="/agent/tickets" class="back-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
+        Back to Queue
+      </a>
+      <div class="ticket-title-row">
+        <h1 class="ticket-title">{{ ticket.title }}</h1>
+        <span class="ticket-id">#{{ ticket.id }}</span>
+      </div>
+      <div class="ticket-meta-row">
+        <span>Reported by <strong>{{ getCustomerName(ticket.customerId) }}</strong></span>
+        <span>•</span>
+        <span>Created {{ formatDateTime(ticket.createdAt) }}</span>
+      </div>
+    </div>
+
+    <!-- Original Description (First Message) -->
+    <div class="ticket-description">
+      <div class="desc-header">
+        <div class="user-avatar-sm">{{ getCustomerName(ticket.customerId).charAt(0).toUpperCase() }}</div>
+        <span class="desc-author">{{ getCustomerName(ticket.customerId) }}</span>
+        <span class="desc-time">{{ formatDateTime(ticket.createdAt) }}</span>
+        <span class="original-badge">Original Report</span>
+      </div>
+      <div class="desc-body">
+        {{ ticket.description }}
+      </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-messages" #chatContainer>
+      @for (msg of messages; track msg.id) {
+      <div class="message-group" [class.message-mine]="msg.senderId === currentUserId">
+        <div class="message-sender-info">
+          @if (msg.senderId !== currentUserId) {
+          <div class="user-avatar-sm" [class.agent-avatar]="msg.senderId === ticket.assignedAgentId">
+            {{ msg.senderUsername.charAt(0).toUpperCase() }}
+          </div>
+          }
+          <span class="message-author">{{ msg.senderUsername }}</span>
+          <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
+        </div>
+        <div class="message-bubble">
+          {{ msg.content }}
+        </div>
+      </div>
+      }
+    </div>
+
+    <!-- Chat Input -->
+    <div class="chat-input-area">
+      <div class="input-wrapper">
+        <textarea class="chat-input" [(ngModel)]="newMessage" (keydown)="onKeyDown($event)"
+          placeholder="Type your reply to the customer (Enter to send, Shift+Enter for new line)..." rows="3"></textarea>
+        <div class="input-actions">
+          <button class="btn-send" (click)="sendMessage()" [disabled]="!newMessage.trim()">
+            Send Reply
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Agent Controls Sidebar -->
+  <div class="control-sidebar">
+    <!-- Status Control Box -->
+    <div class="control-box">
+      <h3 class="control-box-title">Ticket Status</h3>
+      
+      <div class="status-select-wrapper">
+        <select [(ngModel)]="currentStatus" (ngModelChange)="updateStatus($event)" 
+                class="status-select" [ngClass]="getStatusClass(currentStatus)">
+          @for (status of ticketStatuses; track status) {
+            <option [value]="status">{{ getStatusLabel(status) }}</option>
+          }
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+    </div>
+
+    <!-- Assignment Control Box -->
+    <div class="control-box">
+      <h3 class="control-box-title">Assignment</h3>
+      
+      @if (ticket.assignedAgentId) {
+      <div class="assignment-info assigned">
+        <div class="agent-avatar-lg">{{ ticket.assignedAgentName?.charAt(0)?.toUpperCase() }}</div>
+        <div class="agent-details">
+          <span class="agent-name">{{ ticket.assignedAgentName }}</span>
+          <span class="agent-subtext">Currently assigned</span>
+        </div>
+      </div>
+      @if (ticket.assignedAgentId !== currentUserId) {
+        <button class="btn-secondary w-100 mt-3" (click)="assignToMe()">Take Over Ticket</button>
+      }
+      } @else {
+      <div class="assignment-info unassigned">
+        <div class="unassigned-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        </div>
+        <div class="agent-details">
+          <span class="agent-name">Unassigned</span>
+          <span class="agent-subtext">No agent working on this</span>
+        </div>
+      </div>
+      <button class="btn-primary w-100 mt-3" (click)="assignToMe()">Assign to Me</button>
+      }
+    </div>
+
+    <!-- Properties Box -->
+    <div class="control-box">
+      <h3 class="control-box-title">Properties</h3>
+      
+      <div class="property-row">
+        <span class="property-label">Priority</span>
+        <div class="priority-cell">
+          <span class="priority-indicator" [ngClass]="getPriorityClass(ticket.priority)"></span>
+          <span>{{ ticket.priority }}</span>
+        </div>
+      </div>
+      
+      <div class="property-row">
+        <span class="property-label">Last Updated</span>
+        <span class="property-value">{{ formatDate(ticket.updatedAt || ticket.createdAt) }}</span>
+      </div>
+      
+      <div class="property-row">
+        <span class="property-label">Customer ID</span>
+        <span class="property-value">#{{ ticket.customerId }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+}

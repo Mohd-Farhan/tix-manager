@@ -21,7 +21,18 @@ export class TicketListComponent implements OnInit, OnDestroy {
   filteredTickets: Ticket[] = [];
   searchQuery = '';
   activeFilter: string = 'ALL';
-  sortBy: 'newest' | 'oldest' | 'priority' = 'newest';
+  sortBy: 'newest' | 'oldest' | 'priority' | 'priority-asc' = 'newest';
+  dateFilter: string = 'all';
+  customStartDate: string = '';
+  customEndDate: string = '';
+
+  dateOptions = [
+    { key: 'all', label: 'All Time' },
+    { key: '7', label: 'Last 7 Days' },
+    { key: '30', label: 'Last 30 Days' },
+    { key: '90', label: 'Last 90 Days' },
+    { key: 'custom', label: 'Custom Range...' }
+  ];
 
   filters = [
     { key: 'ALL', label: 'All' },
@@ -65,9 +76,27 @@ export class TicketListComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  setSort(sort: 'newest' | 'oldest' | 'priority'): void {
+  setSort(sort: 'newest' | 'oldest' | 'priority' | 'priority-asc'): void {
     this.sortBy = sort;
     this.applyFilters();
+  }
+
+  setDateFilter(val: string): void {
+    this.dateFilter = val;
+    if (val !== 'custom') {
+      this.customStartDate = '';
+      this.customEndDate = '';
+      this.page = 1;
+      this.applyFilters();
+    }
+  }
+
+  onCustomDateChange(): void {
+    // Only apply if both are set (or handle partial, but usually better when both are selected or cleared)
+    if ((this.customStartDate && this.customEndDate) || (!this.customStartDate && !this.customEndDate)) {
+       this.page = 1;
+       this.applyFilters();
+    }
   }
 
   private applyFilters(): void {
@@ -84,6 +113,24 @@ export class TicketListComponent implements OnInit, OnDestroy {
       result = result.filter((t) => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
     }
 
+    // Date filter
+    if (this.dateFilter !== 'all') {
+      const now = new Date();
+      if (this.dateFilter === '7' || this.dateFilter === '30' || this.dateFilter === '90') {
+        const days = parseInt(this.dateFilter, 10);
+        const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        result = result.filter(t => new Date(t.createdAt) >= cutoff);
+      } else if (this.dateFilter === 'custom' && this.customStartDate && this.customEndDate) {
+        const start = new Date(this.customStartDate);
+        const end = new Date(this.customEndDate);
+        end.setHours(23, 59, 59, 999); // Include the whole end day
+        result = result.filter(t => {
+          const d = new Date(t.createdAt);
+          return d >= start && d <= end;
+        });
+      }
+    }
+
     // Sort
     if (this.sortBy === 'newest') {
       result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -91,6 +138,9 @@ export class TicketListComponent implements OnInit, OnDestroy {
       result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     } else if (this.sortBy === 'priority') {
       const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      result.sort((a, b) => (order[a.priority] ?? 1) - (order[b.priority] ?? 1));
+    } else if (this.sortBy === 'priority-asc') {
+      const order = { LOW: 0, MEDIUM: 1, HIGH: 2 };
       result.sort((a, b) => (order[a.priority] ?? 1) - (order[b.priority] ?? 1));
     }
 

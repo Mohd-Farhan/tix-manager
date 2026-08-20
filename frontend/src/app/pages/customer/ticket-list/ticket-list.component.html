@@ -24,22 +24,32 @@
         (input)="onSearch()" id="ticket-list-search" />
     </div>
 
+    <select class="filter-select" [ngModel]="activeFilter" (ngModelChange)="setFilter($event)" id="ticket-list-status-filter">
+      @for (filter of filters; track filter.key) {
+      <option [value]="filter.key">{{ filter.label }} ({{ getFilterCount(filter.key) }})</option>
+      }
+    </select>
+
+    <select class="filter-select" [ngModel]="dateFilter" (ngModelChange)="setDateFilter($event)" id="ticket-list-date-filter">
+      @for (opt of dateOptions; track opt.key) {
+      <option [value]="opt.key">{{ opt.label }}</option>
+      }
+    </select>
+
+    @if (dateFilter === 'custom') {
+    <div class="custom-date-group">
+      <input type="date" class="date-input" [(ngModel)]="customStartDate" (ngModelChange)="onCustomDateChange()" aria-label="Start Date">
+      <span class="date-separator">to</span>
+      <input type="date" class="date-input" [(ngModel)]="customEndDate" (ngModelChange)="onCustomDateChange()" aria-label="End Date">
+    </div>
+    }
+
     <select class="sort-select" [ngModel]="sortBy" (ngModelChange)="setSort($event)" id="ticket-list-sort">
       <option value="newest">Newest first</option>
       <option value="oldest">Oldest first</option>
       <option value="priority">Priority (High → Low)</option>
+      <option value="priority-asc">Priority (Low → High)</option>
     </select>
-  </div>
-
-  <!-- Filter Tabs -->
-  <div class="filter-tabs">
-    @for (filter of filters; track filter.key) {
-    <button class="filter-tab" [class.active]="activeFilter === filter.key"
-      (click)="setFilter(filter.key)" id="filter-{{ filter.key }}">
-      {{ filter.label }}
-      <span class="filter-count">{{ getFilterCount(filter.key) }}</span>
-    </button>
-    }
   </div>
 
   <!-- Ticket Cards -->

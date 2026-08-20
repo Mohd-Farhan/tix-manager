@@ -1,0 +1,351 @@
+<!-- Sidebar Backdrop (mobile) -->
+@if (sidebarOpen) {
+<div class="sidebar-backdrop" (click)="closeSidebar()"></div>
+}
+
+<!-- Sidebar -->
+<aside class="sidebar" [class.open]="sidebarOpen" id="agent-sidebar">
+  <div class="sidebar-header">
+    <a routerLink="/agent/dashboard" class="sidebar-brand" (click)="closeSidebar()">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
+        </svg>
+      </div>
+      <span class="brand-text">TixManager</span>
+    </a>
+    <span class="role-badge-sidebar">Agent</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    @for (item of navItems; track item.label) {
+    <a [routerLink]="item.route"
+      [queryParams]="item.queryParams || {}"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: item.route === '/agent/dashboard' }"
+      class="nav-item" (click)="closeSidebar()">
+      <span class="nav-icon" [innerHTML]="item.icon"></span>
+      <span class="nav-label">{{ item.label }}</span>
+    </a>
+    }
+  </nav>
+</aside>
+
+<!-- Main Content Area -->
+<div class="main-area">
+  <!-- Topbar -->
+  <header class="topbar" id="agent-topbar">
+    <button class="hamburger" (click)="toggleSidebar()" id="agent-sidebar-toggle" aria-label="Toggle sidebar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <div class="topbar-right">
+      <!-- Theme Toggle -->
+      <button class="theme-toggle" (click)="toggleTheme()" id="agent-theme-toggle"
+        [attr.aria-label]="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+        @if (isDark) {
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+        } @else {
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+        }
+      </button>
+
+      <!-- Profile Menu -->
+      <div class="profile-menu-container">
+        <button class="user-chip" (click)="toggleProfileDropdown($event)" id="agent-profile-btn"
+          [class.active]="profileDropdownOpen">
+          <div class="user-avatar">{{ getUserInitial() }}</div>
+          <span class="user-name">{{ user?.username }}</span>
+          <svg class="chevron-icon" [class.rotated]="profileDropdownOpen" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+
+        @if (profileDropdownOpen) {
+        <div class="profile-dropdown" id="agent-profile-dropdown">
+          <div class="dropdown-header">
+            <div class="dropdown-avatar">{{ getUserInitial() }}</div>
+            <div class="dropdown-user-info">
+              <span class="dropdown-name">{{ user?.username }}</span>
+              <span class="dropdown-email">{{ user?.email }}</span>
+            </div>
+            <span class="dropdown-role-badge">{{ getRoleLabel(user.role) }}</span>
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <div class="dropdown-menu">
+            <button class="dropdown-item" (click)="openModal('profile')" id="agent-dropdown-profile">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>Profile</span>
+            </button>
+
+            <button class="dropdown-item" (click)="openModal('preferences')" id="agent-dropdown-preferences">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              <span>Preferences</span>
+            </button>
+
+            <button class="dropdown-item" (click)="openModal('password')" id="agent-dropdown-password">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <span>Update password</span>
+            </button>
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <div class="dropdown-footer">
+            <button class="dropdown-item logout" (click)="logout()" id="agent-dropdown-logout">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+  </header>
+
+  <!-- Top Center Modal Window Container -->
+  @if (activeModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-window" (click)="$event.stopPropagation()" id="agent-modal-window">
+
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-title-group">
+          @if (activeModal === 'profile') {
+          <div class="modal-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </div>
+          <span class="modal-title">Agent Profile</span>
+          } @else if (activeModal === 'preferences') {
+          <div class="modal-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </div>
+          <span class="modal-title">Preferences</span>
+          } @else if (activeModal === 'password') {
+          <div class="modal-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <span class="modal-title">Update Password</span>
+          }
+        </div>
+
+        <button class="modal-close-btn" (click)="closeModal()" id="agent-modal-close" aria-label="Close window">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body">
+        <!-- PROFILE VIEW -->
+        @if (activeModal === 'profile') {
+        <div class="profile-view">
+          <div class="profile-hero">
+            <div class="profile-avatar-large">{{ getUserInitial() }}</div>
+            <div class="profile-hero-info">
+              <h3 class="profile-name-large">{{ user?.username }}</h3>
+              <p class="profile-email-large">{{ user?.email }}</p>
+              <div class="profile-badges-row">
+                <span class="role-pill agent-pill">{{ getRoleLabel(user.role) }}</span>
+                <span class="joined-pill">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  Member since {{ formatDate(user.createdAt) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-fields-grid">
+            <div class="field-box">
+              <span class="field-label">Full Name</span>
+              <span class="field-value">{{ user?.username }}</span>
+            </div>
+            <div class="field-box">
+              <span class="field-label">Email</span>
+              <span class="field-value">{{ user?.email }}</span>
+            </div>
+            <div class="field-box">
+              <span class="field-label">Agent ID</span>
+              <span class="field-value">#{{ user?.id }}</span>
+            </div>
+            <div class="field-box">
+              <span class="field-label">Account Status</span>
+              <span class="field-value status-active">Active</span>
+            </div>
+          </div>
+        </div>
+        }
+
+        <!-- PREFERENCES VIEW -->
+        @if (activeModal === 'preferences') {
+        <div class="preferences-view">
+          <div class="pref-item">
+            <div class="pref-info">
+              <span class="pref-label">Dark Theme</span>
+              <span class="pref-desc">Toggle between Light and Dark interface appearance</span>
+            </div>
+            <button class="toggle-switch" [class.on]="isDark" (click)="toggleTheme()" id="agent-modal-theme-toggle">
+              <div class="toggle-knob"></div>
+            </button>
+          </div>
+
+          <div class="pref-item">
+            <div class="pref-info">
+              <span class="pref-label">Assignment Notifications</span>
+              <span class="pref-desc">Get notified when a new ticket is assigned to you</span>
+            </div>
+            <button class="toggle-switch" [class.on]="emailOnAssignment" (click)="emailOnAssignment = !emailOnAssignment">
+              <div class="toggle-knob"></div>
+            </button>
+          </div>
+
+          <div class="pref-item">
+            <div class="pref-info">
+              <span class="pref-label">Customer Reply Alerts</span>
+              <span class="pref-desc">Receive email alerts when customers reply on your tickets</span>
+            </div>
+            <button class="toggle-switch" [class.on]="emailOnCustomerReply" (click)="emailOnCustomerReply = !emailOnCustomerReply">
+              <div class="toggle-knob"></div>
+            </button>
+          </div>
+
+          <div class="pref-item">
+            <div class="pref-info">
+              <span class="pref-label">Sound & Alert Chimes</span>
+              <span class="pref-desc">Play a tone on incoming live chat replies</span>
+            </div>
+            <button class="toggle-switch" [class.on]="soundNotifications" (click)="soundNotifications = !soundNotifications">
+              <div class="toggle-knob"></div>
+            </button>
+          </div>
+
+          <div class="pref-item">
+            <div class="pref-info">
+              <span class="pref-label">Auto-Refresh Queue</span>
+              <span class="pref-desc">Automatically refresh the ticket queue every 30 seconds</span>
+            </div>
+            <button class="toggle-switch" [class.on]="autoRefreshQueue" (click)="autoRefreshQueue = !autoRefreshQueue">
+              <div class="toggle-knob"></div>
+            </button>
+          </div>
+        </div>
+        }
+
+        <!-- UPDATE PASSWORD VIEW -->
+        @if (activeModal === 'password') {
+        <div class="password-view">
+          @if (passwordMessage) {
+          <div class="alert-message" [class.alert-error]="passwordError" [class.alert-success]="!passwordError">
+            <svg *ngIf="!passwordError" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <svg *ngIf="passwordError" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{{ passwordMessage }}</span>
+          </div>
+          }
+
+          <div class="input-field-group">
+            <label class="input-label" for="agent-current-pwd">Current Password</label>
+            <input type="password" id="agent-current-pwd" class="text-input" [(ngModel)]="currentPassword"
+              placeholder="Enter current password" />
+          </div>
+
+          <div class="input-fields-row">
+            <div class="input-field-group">
+              <label class="input-label" for="agent-new-pwd">New Password</label>
+              <input type="password" id="agent-new-pwd" class="text-input" [(ngModel)]="newPassword"
+                placeholder="Min. 8 characters" />
+            </div>
+            <div class="input-field-group">
+              <label class="input-label" for="agent-confirm-pwd">Confirm Password</label>
+              <input type="password" id="agent-confirm-pwd" class="text-input" [(ngModel)]="confirmPassword"
+                placeholder="Confirm new password" />
+            </div>
+          </div>
+
+          <div class="modal-form-actions">
+            <button class="btn-secondary" (click)="closeModal()">Cancel</button>
+            <button class="btn-primary" (click)="updatePassword()" id="agent-modal-password-submit">Update Password</button>
+          </div>
+        </div>
+        }
+      </div>
+
+    </div>
+  </div>
+  }
+
+  <!-- Page Content -->
+  <main class="page-content">
+    <router-outlet />
+  </main>
+
+</div>

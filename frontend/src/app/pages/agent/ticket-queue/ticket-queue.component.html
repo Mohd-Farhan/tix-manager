@@ -1,0 +1,129 @@
+<div class="page-container fade-in">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">Ticket Queue</h1>
+      <p class="page-subtitle">{{ filteredTickets.length }} tickets found</p>
+    </div>
+  </div>
+
+  <!-- Controls Bar -->
+  <div class="controls-bar">
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input type="text" placeholder="Search by ID, title, customer, or agent..." [(ngModel)]="searchTerm"
+        (ngModelChange)="onSearch()" />
+    </div>
+
+    <div class="filters-group">
+      <!-- Assignment Filter -->
+      <div class="select-wrapper">
+        <select [(ngModel)]="assignmentFilter" (ngModelChange)="onFilterChange()" class="filter-select">
+          <option value="ALL">All Assignments</option>
+          <option value="UNASSIGNED">Unassigned Only</option>
+          <option value="ASSIGNED_TO_ME">Assigned to Me</option>
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="select-wrapper">
+        <select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()" class="filter-select">
+          <option value="ALL">All Statuses</option>
+          <option value="OPEN">Open</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+
+      <!-- Sorting -->
+      <div class="select-wrapper">
+        <select [(ngModel)]="sortBy" (ngModelChange)="onFilterChange()" class="filter-select">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="recently-updated">Recently updated</option>
+          <option value="priority-desc">Priority (High → Low)</option>
+          <option value="priority-asc">Priority (Low → High)</option>
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ticket Table -->
+  <div class="table-container">
+    @if (filteredTickets.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <h3>No tickets found</h3>
+      <p>Try adjusting your filters or search terms.</p>
+    </div>
+    } @else {
+    <table class="ticket-table">
+      <thead>
+        <tr>
+          <th class="col-id">ID</th>
+          <th class="col-title">Ticket Title</th>
+          <th class="col-customer">Customer</th>
+          <th class="col-status">Status</th>
+          <th class="col-priority">Priority</th>
+          <th class="col-agent">Assigned To</th>
+          <th class="col-date">Updated</th>
+          <th class="col-action">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (ticket of filteredTickets; track ticket.id) {
+        <tr class="ticket-row" [routerLink]="['/agent/tickets', ticket.id]">
+          <td class="col-id">#{{ ticket.id }}</td>
+          <td class="col-title">
+            <div class="title-text">{{ ticket.title }}</div>
+          </td>
+          <td class="col-customer">
+            <div class="user-cell">
+              <div class="user-avatar-sm">{{ getCustomerName(ticket.customerId).charAt(0).toUpperCase() }}</div>
+              <span>{{ getCustomerName(ticket.customerId) }}</span>
+            </div>
+          </td>
+          <td class="col-status">
+            <span class="status-badge" [ngClass]="getStatusClass(ticket.status)">
+              {{ getStatusLabel(ticket.status) }}
+            </span>
+          </td>
+          <td class="col-priority">
+            <div class="priority-cell">
+              <span class="priority-indicator" [ngClass]="getPriorityClass(ticket.priority)"></span>
+              <span>{{ ticket.priority }}</span>
+            </div>
+          </td>
+          <td class="col-agent">
+            @if (ticket.assignedAgentName) {
+            <div class="user-cell">
+              <div class="user-avatar-sm agent-avatar">{{ ticket.assignedAgentName.charAt(0).toUpperCase() }}</div>
+              <span>{{ ticket.assignedAgentName }}</span>
+            </div>
+            } @else {
+            <span class="unassigned-text">Unassigned</span>
+            }
+          </td>
+          <td class="col-date">{{ formatDate(ticket.updatedAt || ticket.createdAt) }}</td>
+          <td class="col-action">
+            @if (!ticket.assignedAgentId) {
+            <button class="btn-assign" (click)="assignToMe(ticket.id, $event)">Assign to Me</button>
+            } @else {
+            <button class="btn-view" tabindex="-1">View</button>
+            }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+    }
+  </div>
+</div>

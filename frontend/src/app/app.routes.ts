@@ -29,6 +29,27 @@ export const routes: Routes = [
     ]
   },
   {
+    path: 'agent',
+    loadComponent: () => import('./layouts/agent-layout/agent-layout.component').then((m) => m.AgentLayoutComponent),
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', loadComponent: () => import('./pages/agent/dashboard/dashboard.component').then((m) => m.DashboardComponent) },
+      { path: 'tickets', loadComponent: () => import('./pages/agent/ticket-queue/ticket-queue.component').then((m) => m.TicketQueueComponent) },
+      { path: 'tickets/:id', loadComponent: () => import('./pages/agent/ticket-detail/ticket-detail.component').then((m) => m.TicketDetailComponent) },
+    ]
+  },
+  {
+    path: 'admin',
+    loadComponent: () => import('./layouts/admin-layout/admin-layout.component').then((m) => m.AdminLayoutComponent),
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', loadComponent: () => import('./pages/admin/dashboard/dashboard.component').then((m) => m.AdminDashboardComponent) },
+      { path: 'users', loadComponent: () => import('./pages/admin/user-management/user-management.component').then((m) => m.UserManagementComponent) },
+      { path: 'tickets', loadComponent: () => import('./pages/admin/ticket-oversight/ticket-oversight.component').then((m) => m.TicketOversightComponent) },
+      { path: 'settings', loadComponent: () => import('./pages/admin/system-settings/system-settings.component').then((m) => m.SystemSettingsComponent) },
+    ]
+  },
+  {
     path: '**',
     redirectTo: '',
   }
