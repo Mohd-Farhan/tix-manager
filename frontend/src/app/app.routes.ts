@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { roleGuard } from './guards/auth.guard';
+import { UserRole } from './models/user.model';
 
 export const routes: Routes = [
   {
@@ -20,6 +22,7 @@ export const routes: Routes = [
   },
   {
     path: 'customer',
+    canActivate: [roleGuard([UserRole.CUSTOMER])],
     loadComponent: () => import('./layouts/customer-layout/customer-layout.component').then((m) => m.CustomerLayoutComponent),
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -30,6 +33,7 @@ export const routes: Routes = [
   },
   {
     path: 'agent',
+    canActivate: [roleGuard([UserRole.SUPPORT_AGENT])],
     loadComponent: () => import('./layouts/agent-layout/agent-layout.component').then((m) => m.AgentLayoutComponent),
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -40,6 +44,7 @@ export const routes: Routes = [
   },
   {
     path: 'admin',
+    canActivate: [roleGuard([UserRole.ADMIN])],
     loadComponent: () => import('./layouts/admin-layout/admin-layout.component').then((m) => m.AdminLayoutComponent),
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -54,3 +59,4 @@ export const routes: Routes = [
     redirectTo: '',
   }
 ];
+

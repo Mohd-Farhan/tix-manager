@@ -2,6 +2,8 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AuthService } from '../../../services/auth.service';
+import { UserRole } from '../../../models/user.model';
 
 @Component({
   selector: 'app-login',
@@ -13,6 +15,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 export class LoginComponent implements OnInit {
   private fb = inject(FormBuilder);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
   loginForm!: FormGroup;
   showPassword = false;
@@ -51,15 +54,31 @@ export class LoginComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // TODO: Connect to AuthService -> POST /api/auth/login
     const { username, password } = this.loginForm.value;
-    console.log('Login payload:', { username, password });
 
-    // Simulate API call
-    setTimeout(() => {
-      this.isLoading = false;
-      // On success: this.router.navigate(['/dashboard']);
-    }, 1500);
+    this.authService.login({ username, password }).subscribe({
+      next: (res) => {
+        this.isLoading = false;
+        const role = res.user?.role;
+        if (role === UserRole.CUSTOMER) {
+          this.router.navigate(['/customer/dashboard']);
+        } else if (role === UserRole.SUPPORT_AGENT) {
+          this.router.navigate(['/agent/dashboard']);
+        } else if (role === UserRole.ADMIN) {
+          this.router.navigate(['/admin/dashboard']);
+        } else {
+          this.router.navigate(['/']);
+        }
+      },
+      error: (err) => {
+        this.isLoading = false;
+        if (err.status === 401) {
+          this.errorMessage = 'Invalid username or password. Please try again.';
+        } else {
+          this.errorMessage = err.error?.message || err.error || 'Login failed. Please verify the backend is running.';
+        }
+      },
+    });
   }
 
   get f() {

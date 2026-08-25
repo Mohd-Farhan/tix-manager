@@ -9,5 +9,8 @@ export interface User {
   username: string;
   email: string;
   role: UserRole;
+  deleted?: boolean;
+  status?: 'active' | 'inactive';
   createdAt?: string;
 }
+

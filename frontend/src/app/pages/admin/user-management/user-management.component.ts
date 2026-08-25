@@ -1,25 +1,33 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MockDataService, SystemUser } from '../../../services/mock-data.service';
-import { UserRole } from '../../../models/user.model';
+import { UserService } from '../../../services/user.service';
+import { AuthService } from '../../../services/auth.service';
+import { User, UserRole } from '../../../models/user.model';
+import { SearchBoxComponent } from '../../../shared/components/search-box/search-box.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { ModalShellComponent } from '../../../shared/components/modal-shell/modal-shell.component';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-admin-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchBoxComponent, EmptyStateComponent, ModalShellComponent],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.css',
 })
 export class UserManagementComponent implements OnInit {
-  private mockData = inject(MockDataService);
+  private userService = inject(UserService);
+  private authService = inject(AuthService);
+  private toast = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
 
-  users: SystemUser[] = [];
-  filteredUsers: SystemUser[] = [];
+  users: User[] = [];
+  filteredUsers: User[] = [];
   searchTerm = '';
   roleFilter = 'ALL';
   showAddUserModal = false;
+  isLoading = true;
 
   // Add user form
   newUsername = '';
@@ -38,9 +46,23 @@ export class UserManagementComponent implements OnInit {
     this.loadUsers();
   }
 
-  private loadUsers(): void {
-    this.users = this.mockData.getAllUsers();
-    this.applyFilters();
+  loadUsers(): void {
+    this.isLoading = true;
+    this.userService.getAllUsersAdmin().subscribe({
+      next: (users) => {
+        this.users = users.map(u => ({
+          ...u,
+          status: u.deleted ? 'inactive' : 'active'
+        }));
+        this.applyFilters();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   onSearch(): void {
@@ -91,25 +113,53 @@ export class UserManagementComponent implements OnInit {
       this.formSuccess = '';
       return;
     }
-    this.mockData.addUser({ username: this.newUsername.trim(), email: this.newEmail.trim(), role: this.newRole });
-    this.formError = '';
-    this.formSuccess = `User "${this.newUsername.trim()}" created successfully.`;
-    this.newUsername = '';
-    this.newEmail = '';
-    this.newRole = UserRole.CUSTOMER;
-    this.loadUsers();
-    this.cdr.detectChanges();
-    setTimeout(() => this.closeAddUserModal(), 1200);
+
+    const payload = {
+      username: this.newUsername.trim(),
+      email: this.newEmail.trim(),
+      password: 'password123',
+      role: this.newRole,
+    };
+
+    this.authService.register(payload).subscribe({
+      next: (created) => {
+        this.formError = '';
+        this.formSuccess = `User "${created.username}" created successfully.`;
+        this.toast.success(`User "${created.username}" created with default password "password123".`);
+        this.newUsername = '';
+        this.newEmail = '';
+        this.newRole = UserRole.CUSTOMER;
+        this.loadUsers();
+        this.cdr.detectChanges();
+        setTimeout(() => this.closeAddUserModal(), 1200);
+      },
+      error: (err) => {
+        this.formError = err.error?.message || err.error || 'Failed to create user.';
+        this.formSuccess = '';
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   changeRole(userId: number, newRole: UserRole): void {
-    this.mockData.updateUserRole(userId, newRole);
-    this.loadUsers();
+    const user = this.users.find(u => u.id === userId);
+    if (user) {
+      user.role = newRole;
+      this.toast.info(`User role set to ${newRole}.`);
+      this.applyFilters();
+    }
   }
 
   toggleStatus(userId: number): void {
-    this.mockData.toggleUserStatus(userId);
-    this.loadUsers();
+    this.userService.softDeleteUser(userId).subscribe({
+      next: () => {
+        this.toast.success(`User #${userId} status updated.`);
+        this.loadUsers();
+      },
+      error: () => {
+        this.toast.error(`Failed to update status for user #${userId}.`);
+      }
+    });
   }
 
   getRoleLabel(role: UserRole): string {
@@ -120,7 +170,9 @@ export class UserManagementComponent implements OnInit {
     return { CUSTOMER: 'role-customer', SUPPORT_AGENT: 'role-agent', ADMIN: 'role-admin' }[role] ?? '';
   }
 
-  formatDate(dateStr: string): string {
+  formatDate(dateStr?: string): string {
+    if (!dateStr) return 'N/A';
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 }
+

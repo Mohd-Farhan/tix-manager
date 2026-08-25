@@ -165,6 +165,11 @@ public class TicketService {
         ticketRepository.save(ticket);
     }
 
+    public List<TicketDTO> getAllActiveTickets() {
+        List<Ticket> tickets = ticketRepository.findAll();
+        return ticketMapper.toDTOList(tickets);
+    }
+
     public List<TicketDTO> getAllTicketsIncludingDeleted() {
         List<Ticket> tickets = ticketRepository.findAllIncludingDeleted();
         return ticketMapper.toDTOList(tickets);

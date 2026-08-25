@@ -17,6 +17,13 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    @GetMapping("/agents")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPPORT_AGENT')")
+    public ResponseEntity<List<UserDTO>> getAgents() {
+        List<UserDTO> agents = userService.getUsersByRole(com.support.entity.UserRole.SUPPORT_AGENT);
+        return ResponseEntity.ok(agents);
+    }
+
     @GetMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId) {

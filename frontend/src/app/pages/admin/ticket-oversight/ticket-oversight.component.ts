@@ -1,24 +1,36 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MockDataService, SystemUser } from '../../../services/mock-data.service';
+import { Subscription } from 'rxjs';
+import { TicketService } from '../../../services/ticket.service';
+import { UserService } from '../../../services/user.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
-import { UserRole } from '../../../models/user.model';
+import { User } from '../../../models/user.model';
+import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { PriorityBadgeComponent } from '../../../shared/components/priority-badge/priority-badge.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { SearchBoxComponent } from '../../../shared/components/search-box/search-box.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-admin-ticket-oversight',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, StatusBadgeComponent, PriorityBadgeComponent, EmptyStateComponent, SearchBoxComponent, ConfirmDialogComponent],
   templateUrl: './ticket-oversight.component.html',
   styleUrl: './ticket-oversight.component.css',
 })
-export class TicketOversightComponent implements OnInit {
-  private mockData = inject(MockDataService);
+export class TicketOversightComponent implements OnInit, OnDestroy {
+  private ticketService = inject(TicketService);
+  private userService = inject(UserService);
   private cdr = inject(ChangeDetectorRef);
+  private toast = inject(ToastService);
+  private subscription = new Subscription();
 
   tickets: Ticket[] = [];
   filteredTickets: Ticket[] = [];
-  agents: SystemUser[] = [];
+  agents: User[] = [];
+  isLoading = true;
 
   searchTerm = '';
   statusFilter = 'ALL';
@@ -30,13 +42,45 @@ export class TicketOversightComponent implements OnInit {
   confirmDeleteId: number | null = null;
 
   ngOnInit(): void {
-    this.tickets = this.mockData.getAllTickets();
-    this.agents = this.mockData.getAgentUsers();
-    this.applyFilters();
+    this.loadData();
 
-    this.mockData.ticketUpdated$.subscribe(() => {
-      this.tickets = this.mockData.getAllTickets();
-      this.applyFilters();
+    this.subscription.add(
+      this.ticketService.ticketUpdated$.subscribe(() => {
+        this.loadData();
+      })
+    );
+
+    this.subscription.add(
+      this.ticketService.ticketCreated$.subscribe(() => {
+        this.loadData();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+
+  loadData(): void {
+    this.isLoading = true;
+    this.ticketService.getAllTickets().subscribe({
+      next: (tickets) => {
+        this.tickets = tickets.filter(t => !t.deleted);
+        this.applyFilters();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+
+    this.userService.getAgents().subscribe({
+      next: (agents) => {
+        this.agents = agents;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -50,7 +94,7 @@ export class TicketOversightComponent implements OnInit {
       const term = this.searchTerm.toLowerCase();
       result = result.filter(
         (t) => t.title.toLowerCase().includes(term) || t.id.toString().includes(term) ||
-          this.mockData.getCustomerNameById(t.customerId).toLowerCase().includes(term) ||
+          (t.customerUsername && t.customerUsername.toLowerCase().includes(term)) ||
           (t.assignedAgentName && t.assignedAgentName.toLowerCase().includes(term))
       );
     }
@@ -75,23 +119,30 @@ export class TicketOversightComponent implements OnInit {
 
   reassignTicket(ticketId: number, agentId: string): void {
     const id = +agentId;
-    if (!id) {
-      // Unassign
-      const ticket = this.tickets.find((t) => t.id === ticketId);
-      if (ticket) {
-        this.mockData.reassignTicket(ticketId, 0, '');
+    if (!id) return;
+
+    this.ticketService.assignTicket(ticketId, id).subscribe({
+      next: () => {
+        this.toast.success(`Ticket #${ticketId} assigned successfully.`);
+        this.loadData();
+      },
+      error: () => {
+        this.toast.error(`Failed to assign ticket #${ticketId}.`);
       }
-      return;
-    }
-    const agent = this.agents.find((a) => a.id === id);
-    if (agent) {
-      this.mockData.reassignTicket(ticketId, agent.id, agent.username);
-    }
+    });
   }
 
   forceClose(ticketId: number, event: Event): void {
     event.stopPropagation();
-    this.mockData.forceCloseTicket(ticketId);
+    this.ticketService.updateTicketStatus(ticketId, TicketStatus.RESOLVED).subscribe({
+      next: () => {
+        this.toast.success(`Ticket #${ticketId} has been force-closed.`);
+        this.loadData();
+      },
+      error: () => {
+        this.toast.error(`Failed to close ticket #${ticketId}.`);
+      }
+    });
   }
 
   confirmDelete(ticketId: number, event: Event): void {
@@ -102,11 +153,18 @@ export class TicketOversightComponent implements OnInit {
 
   executeDelete(): void {
     if (this.confirmDeleteId) {
-      this.mockData.deleteTicketAdmin(this.confirmDeleteId);
-      this.confirmDeleteId = null;
-      this.tickets = this.mockData.getAllTickets();
-      this.applyFilters();
-      this.cdr.detectChanges();
+      const id = this.confirmDeleteId;
+      this.ticketService.softDeleteTicket(id).subscribe({
+        next: () => {
+          this.confirmDeleteId = null;
+          this.toast.success(`Ticket #${id} deleted successfully.`);
+          this.loadData();
+        },
+        error: () => {
+          this.confirmDeleteId = null;
+          this.toast.error(`Failed to delete ticket #${id}.`);
+        }
+      });
     }
   }
 
@@ -115,7 +173,11 @@ export class TicketOversightComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  getCustomerName(customerId: number): string { return this.mockData.getCustomerNameById(customerId); }
+  getCustomerName(customerId: number): string {
+    const ticket = this.tickets.find(t => t.customerId === customerId);
+    return ticket?.customerUsername ?? `Customer #${customerId}`;
+  }
+
   getStatusClass(s: TicketStatus): string { return { OPEN: 'status-open', IN_PROGRESS: 'status-progress', RESOLVED: 'status-resolved' }[s] ?? ''; }
   getStatusLabel(s: TicketStatus): string { return { OPEN: 'Open', IN_PROGRESS: 'In Progress', RESOLVED: 'Resolved' }[s] ?? s; }
   getPriorityClass(p: TicketPriority): string { return { LOW: 'priority-low', MEDIUM: 'priority-medium', HIGH: 'priority-high' }[p] ?? ''; }
@@ -124,3 +186,4 @@ export class TicketOversightComponent implements OnInit {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 }
+

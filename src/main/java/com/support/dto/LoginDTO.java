@@ -1,7 +1,5 @@
 package com.support.dto;
 
-import com.support.entity.UserRole;
-
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,8 +17,4 @@ public class LoginDTO {
 
     @NotBlank(message = "Password is required")
     private String password;
-
-    // Response fields (populated only in the response)
-    private String token;
-    private UserRole role;
 }

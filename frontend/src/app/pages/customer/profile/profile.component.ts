@@ -2,7 +2,7 @@ import { Component, OnInit, inject, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { MockDataService } from '../../../services/mock-data.service';
+import { AuthService } from '../../../services/auth.service';
 import { User, UserRole } from '../../../models/user.model';
 
 @Component({
@@ -13,10 +13,15 @@ import { User, UserRole } from '../../../models/user.model';
   styleUrl: './profile.component.css',
 })
 export class ProfileComponent implements OnInit, AfterViewInit {
-  private mockData = inject(MockDataService);
+  private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
 
-  user!: User;
+  user: User = this.authService.getCurrentUser() || {
+    id: 1,
+    username: 'Customer',
+    email: '',
+    role: UserRole.CUSTOMER
+  };
   isDark = false;
 
   // Password form (mock only)
@@ -31,7 +36,8 @@ export class ProfileComponent implements OnInit, AfterViewInit {
   emailOnReply = true;
 
   ngOnInit(): void {
-    this.user = this.mockData.getCurrentUser();
+    const u = this.authService.getCurrentUser();
+    if (u) this.user = u;
     this.isDark = localStorage.getItem('tix-theme') === 'dark';
   }
 

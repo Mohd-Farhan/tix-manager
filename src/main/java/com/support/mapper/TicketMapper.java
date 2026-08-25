@@ -15,7 +15,9 @@ import com.support.entity.Ticket;
 public interface TicketMapper {
 
     @Mapping(source = "customer.id", target = "customerId")
+    @Mapping(source = "customer.username", target = "customerUsername")
     @Mapping(source = "assignedAgent.id", target = "assignedAgentId")
+    @Mapping(source = "assignedAgent.username", target = "assignedAgentName")
     TicketDTO toDTO(Ticket ticket);
 
     List<TicketDTO> toDTOList(List<Ticket> tickets);

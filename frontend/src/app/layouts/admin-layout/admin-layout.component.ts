@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { MockDataService } from '../../services/mock-data.service';
+import { AuthService } from '../../services/auth.service';
 import { User, UserRole } from '../../models/user.model';
 
 export type AdminModalType = 'profile' | 'preferences' | 'password' | null;
@@ -16,13 +16,18 @@ export type AdminModalType = 'profile' | 'preferences' | 'password' | null;
   styleUrl: './admin-layout.component.css',
 })
 export class AdminLayoutComponent implements OnInit, OnDestroy {
-  private mockData = inject(MockDataService);
+  private authService = inject(AuthService);
   private router = inject(Router);
   private elementRef = inject(ElementRef);
   private cdr = inject(ChangeDetectorRef);
   private subscription = new Subscription();
 
-  user!: User;
+  user: User = this.authService.getCurrentUser() || {
+    id: 100,
+    username: 'Admin',
+    email: '',
+    role: UserRole.ADMIN
+  };
   isDark = false;
   sidebarOpen = false;
   profileDropdownOpen = false;
@@ -66,8 +71,10 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
-    this.mockData.switchToAdmin();
-    this.user = this.mockData.getCurrentUser();
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser) {
+      this.user = currentUser;
+    }
     const savedTheme = localStorage.getItem('tix-theme');
     this.isDark = savedTheme === 'dark';
     this.applyTheme();
@@ -123,9 +130,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   logout(): void {
     this.closeProfileDropdown();
     this.closeModal();
-    this.mockData.switchToCustomer();
-    localStorage.removeItem('tix-token');
-    this.router.navigate(['/auth/login']);
+    this.authService.logout();
   }
 
   getUserInitial(): string {

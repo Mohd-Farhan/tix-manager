@@ -1,7 +1,9 @@
 package com.support.controller;
 
+import com.support.dto.AuthResponse;
 import com.support.dto.LoginDTO;
 import com.support.dto.UserDTO;
+import com.support.mapper.UserMapper;
 import com.support.security.JwtService;
 import com.support.security.UserDetailsImpl;
 import com.support.service.UserService;
@@ -29,6 +31,9 @@ public class AuthController {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private UserMapper userMapper;
+
     @PostMapping("/register")
     public ResponseEntity<UserDTO> registerUser(@Valid @RequestBody UserDTO userDto) {
         UserDTO createdUser = userService.registerUser(userDto);
@@ -51,11 +56,10 @@ public class AuthController {
             String token = jwtService.generateToken(userDetails);
 
             // Step 4: Build and return the response
-            LoginDTO response = LoginDTO.builder()
-                    .username(userDetails.getUsername())
-                    .password(null) // don't send password back
+            UserDTO userDto = userMapper.toDTO(userDetails.getUser());
+            AuthResponse response = AuthResponse.builder()
                     .token(token)
-                    .role(userDetails.getUser().getRole())
+                    .user(userDto)
                     .build();
 
             return ResponseEntity.ok(response);

@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { MockDataService } from '../../services/mock-data.service';
+import { AuthService } from '../../services/auth.service';
+import { TicketService } from '../../services/ticket.service';
 import { User, UserRole } from '../../models/user.model';
 import { TicketPriority } from '../../models/ticket.model';
 
@@ -17,13 +18,19 @@ export type ActiveModalType = 'profile' | 'preferences' | 'password' | 'create-t
   styleUrl: './customer-layout.component.css',
 })
 export class CustomerLayoutComponent implements OnInit, OnDestroy {
-  private mockData = inject(MockDataService);
+  private authService = inject(AuthService);
+  private ticketService = inject(TicketService);
   private router = inject(Router);
   private elementRef = inject(ElementRef);
   private cdr = inject(ChangeDetectorRef);
   private subscription = new Subscription();
 
-  user!: User;
+  user: User = this.authService.getCurrentUser() || {
+    id: 1,
+    username: 'Customer',
+    email: '',
+    role: UserRole.CUSTOMER
+  };
   isDark = false;
   sidebarOpen = false;
   profileDropdownOpen = false;
@@ -71,13 +78,16 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
-    this.user = this.mockData.getCurrentUser();
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser) {
+      this.user = currentUser;
+    }
     const savedTheme = localStorage.getItem('tix-theme');
     this.isDark = savedTheme === 'dark';
     this.applyTheme();
 
     this.subscription.add(
-      this.mockData.openCreateTicket$.subscribe(() => {
+      this.ticketService.openCreateTicket$.subscribe(() => {
         this.openModal('create-ticket');
         this.cdr.detectChanges();
       })
@@ -142,8 +152,7 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
   logout(): void {
     this.closeProfileDropdown();
     this.closeModal();
-    localStorage.removeItem('tix-token');
-    this.router.navigate(['/auth/login']);
+    this.authService.logout();
   }
 
   getUserInitial(): string {
@@ -220,20 +229,27 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
     this.isCreatingTicket = true;
     this.cdr.detectChanges();
 
-    // Create ticket in mock service
-    this.mockData.createTicket({
+    this.ticketService.createTicket({
       title: this.ticketTitle.trim(),
       description: this.ticketDescription.trim(),
       priority: this.ticketPriority,
+      customerId: this.user.id,
+    }).subscribe({
+      next: () => {
+        this.isCreatingTicket = false;
+        this.ticketCreatedSuccess = true;
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+          this.closeModal();
+        }, 700);
+      },
+      error: (err) => {
+        this.isCreatingTicket = false;
+        this.ticketErrorMessage = err.error?.message || err.error || 'Failed to create ticket. Please try again.';
+        this.cdr.detectChanges();
+      }
     });
-
-    this.isCreatingTicket = false;
-    this.ticketCreatedSuccess = true;
-    this.cdr.detectChanges();
-
-    setTimeout(() => {
-      this.closeModal();
-    }, 700);
   }
 
   @HostListener('document:click', ['$event'])

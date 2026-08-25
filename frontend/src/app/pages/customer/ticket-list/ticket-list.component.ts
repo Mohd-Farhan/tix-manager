@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { MockDataService } from '../../../services/mock-data.service';
+import { TicketService } from '../../../services/ticket.service';
+import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
 
 @Component({
@@ -14,7 +15,9 @@ import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.mod
   styleUrl: './ticket-list.component.css',
 })
 export class TicketListComponent implements OnInit, OnDestroy {
-  private mockData = inject(MockDataService);
+  private ticketService = inject(TicketService);
+  private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
   private subscription = new Subscription();
 
   allTickets: Ticket[] = [];
@@ -25,6 +28,7 @@ export class TicketListComponent implements OnInit, OnDestroy {
   dateFilter: string = 'all';
   customStartDate: string = '';
   customEndDate: string = '';
+  isLoading = true;
 
   dateOptions = [
     { key: 'all', label: 'All Time' },
@@ -46,13 +50,17 @@ export class TicketListComponent implements OnInit, OnDestroy {
   pageSize = 5;
 
   ngOnInit(): void {
-    this.allTickets = this.mockData.getTickets();
-    this.applyFilters();
+    this.loadTickets();
 
     this.subscription.add(
-      this.mockData.ticketCreated$.subscribe(() => {
-        this.allTickets = this.mockData.getTickets();
-        this.applyFilters();
+      this.ticketService.ticketCreated$.subscribe(() => {
+        this.loadTickets();
+      })
+    );
+
+    this.subscription.add(
+      this.ticketService.ticketUpdated$.subscribe(() => {
+        this.loadTickets();
       })
     );
   }
@@ -61,8 +69,27 @@ export class TicketListComponent implements OnInit, OnDestroy {
     this.subscription.unsubscribe();
   }
 
+  loadTickets(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user) return;
+
+    this.isLoading = true;
+    this.ticketService.getTicketsForUser(user.id).subscribe({
+      next: (tickets) => {
+        this.isLoading = false;
+        this.allTickets = tickets.filter(t => !t.deleted);
+        this.applyFilters();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   openCreateTicketModal(): void {
-    this.mockData.triggerCreateTicket();
+    this.ticketService.triggerCreateTicketModal();
   }
 
   onSearch(): void {

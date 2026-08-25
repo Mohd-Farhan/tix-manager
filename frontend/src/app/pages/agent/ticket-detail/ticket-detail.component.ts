@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, inject, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MockDataService } from '../../../services/mock-data.service';
+import { TicketService } from '../../../services/ticket.service';
+import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
 import { Message } from '../../../models/message.model';
 
@@ -16,7 +17,9 @@ import { Message } from '../../../models/message.model';
 export class TicketDetailComponent implements OnInit, AfterViewChecked {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private mockData = inject(MockDataService);
+  private ticketService = inject(TicketService);
+  private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('chatContainer') chatContainer!: ElementRef;
 
@@ -25,6 +28,8 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
   newMessage = '';
   currentUserId = 0;
   notFound = false;
+  isLoading = true;
+  isSending = false;
   
   // Status controls
   ticketStatuses = Object.values(TicketStatus);
@@ -34,16 +39,33 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.ticket = this.mockData.getTicketById(id);
-    this.currentUserId = this.mockData.getCurrentUser().id;
+    const user = this.authService.getCurrentUser();
+    this.currentUserId = user?.id || 0;
 
-    if (this.ticket) {
-      this.currentStatus = this.ticket.status;
-      this.messages = this.mockData.getMessagesForTicket(id);
-      this.shouldScroll = true;
-    } else {
-      this.notFound = true;
-    }
+    this.ticketService.getTicketById(id).subscribe({
+      next: (ticket) => {
+        this.ticket = ticket;
+        this.currentStatus = ticket.status;
+        this.isLoading = false;
+        this.loadMessages(id);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.notFound = true;
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadMessages(ticketId: number): void {
+    this.ticketService.getMessageThread(ticketId).subscribe({
+      next: (messages) => {
+        this.messages = messages;
+        this.shouldScroll = true;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   ngAfterViewChecked(): void {
@@ -54,20 +76,43 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
   }
 
   sendMessage(): void {
-    if (!this.newMessage.trim() || !this.ticket) return;
+    if (!this.newMessage.trim() || !this.ticket || this.isSending) return;
+
+    const content = this.newMessage.trim();
+    this.isSending = true;
 
     // Auto-assign to me if replying to an unassigned ticket
     if (!this.ticket.assignedAgentId) {
-      this.assignToMe();
+      this.ticketService.assignTicket(this.ticket.id, this.currentUserId).subscribe({
+        next: (updatedTicket) => {
+          this.ticket = updatedTicket;
+          this.postMessage(content);
+        },
+        error: () => {
+          this.postMessage(content);
+        }
+      });
+    } else {
+      this.postMessage(content);
     }
+  }
 
-    const msg = this.mockData.addMessage(this.ticket.id, this.newMessage.trim());
-    this.messages.push(msg);
-    this.newMessage = '';
-    this.shouldScroll = true;
-    
-    // Refresh ticket to show assignment if it just happened
-    this.ticket = this.mockData.getTicketById(this.ticket.id);
+  private postMessage(content: string): void {
+    if (!this.ticket) return;
+
+    this.ticketService.addMessage(this.ticket.id, content).subscribe({
+      next: (msg) => {
+        this.messages.push(msg);
+        this.newMessage = '';
+        this.isSending = false;
+        this.shouldScroll = true;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isSending = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   onKeyDown(event: KeyboardEvent): void {
@@ -80,19 +125,23 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
   updateStatus(newStatus: TicketStatus): void {
     if (!this.ticket || this.ticket.status === newStatus) return;
     
-    const updated = this.mockData.updateTicketStatus(this.ticket.id, newStatus);
-    if (updated) {
-      this.ticket = updated;
-      this.currentStatus = updated.status;
-    }
+    this.ticketService.updateTicketStatus(this.ticket.id, newStatus).subscribe({
+      next: (updated) => {
+        this.ticket = updated;
+        this.currentStatus = updated.status;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   assignToMe(): void {
     if (!this.ticket) return;
-    const updated = this.mockData.assignTicket(this.ticket.id, this.currentUserId);
-    if (updated) {
-      this.ticket = updated;
-    }
+    this.ticketService.assignTicket(this.ticket.id, this.currentUserId).subscribe({
+      next: (updated) => {
+        this.ticket = updated;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   private scrollToBottom(): void {
@@ -103,8 +152,11 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
   }
 
   getCustomerName(customerId: number | undefined): string {
+    if (this.ticket?.customerUsername) {
+      return this.ticket.customerUsername;
+    }
     if (!customerId) return 'Unknown';
-    return this.mockData.getCustomerNameById(customerId);
+    return `Customer #${customerId}`;
   }
 
   getStatusClass(status: TicketStatus): string {

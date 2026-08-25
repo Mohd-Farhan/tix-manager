@@ -35,8 +35,10 @@ public class TicketDTO {
     private TicketPriority priority;
 
     private Long customerId;
+    private String customerUsername;
 
     private Long assignedAgentId;
+    private String assignedAgentName;
 
     private LocalDateTime createdAt;
 

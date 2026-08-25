@@ -1,8 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
-import { MockDataService } from '../../../services/mock-data.service';
+import { Subscription } from 'rxjs';
+import { TicketService } from '../../../services/ticket.service';
+import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
 
 @Component({
@@ -12,14 +14,18 @@ import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.mod
   templateUrl: './ticket-queue.component.html',
   styleUrl: './ticket-queue.component.css'
 })
-export class TicketQueueComponent implements OnInit {
-  private mockData = inject(MockDataService);
+export class TicketQueueComponent implements OnInit, OnDestroy {
+  private ticketService = inject(TicketService);
+  private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
+  private subscription = new Subscription();
 
   tickets: Ticket[] = [];
   filteredTickets: Ticket[] = [];
   currentUserId = 0;
+  isLoading = true;
 
   // Filters
   searchTerm = '';
@@ -28,40 +34,66 @@ export class TicketQueueComponent implements OnInit {
   sortBy = 'newest';
 
   ngOnInit(): void {
-    this.currentUserId = this.mockData.getCurrentUser().id;
-    this.tickets = this.mockData.getAllTickets();
-    
+    const user = this.authService.getCurrentUser();
+    this.currentUserId = user?.id || 0;
+
+    this.loadTickets();
+
     // Read query params for initial filters
-    this.route.queryParams.subscribe(params => {
-      const filter = params['filter'];
-      if (filter === 'assigned') {
-        this.assignmentFilter = 'ASSIGNED_TO_ME';
-      } else if (filter === 'unassigned') {
-        this.assignmentFilter = 'UNASSIGNED';
-        this.statusFilter = 'OPEN';
-      } else if (filter === 'my-open') {
-        this.assignmentFilter = 'ASSIGNED_TO_ME';
-        this.statusFilter = 'OPEN';
-      } else if (filter === 'my-progress') {
-        this.assignmentFilter = 'ASSIGNED_TO_ME';
-        this.statusFilter = 'IN_PROGRESS';
-      } else if (filter === 'my-resolved') {
-        this.assignmentFilter = 'ASSIGNED_TO_ME';
-        this.statusFilter = 'RESOLVED';
-      }
-      this.applyFilters();
-    });
+    this.subscription.add(
+      this.route.queryParams.subscribe(params => {
+        const filter = params['filter'];
+        if (filter === 'assigned') {
+          this.assignmentFilter = 'ASSIGNED_TO_ME';
+        } else if (filter === 'unassigned') {
+          this.assignmentFilter = 'UNASSIGNED';
+          this.statusFilter = 'OPEN';
+        } else if (filter === 'my-open') {
+          this.assignmentFilter = 'ASSIGNED_TO_ME';
+          this.statusFilter = 'OPEN';
+        } else if (filter === 'my-progress') {
+          this.assignmentFilter = 'ASSIGNED_TO_ME';
+          this.statusFilter = 'IN_PROGRESS';
+        } else if (filter === 'my-resolved') {
+          this.assignmentFilter = 'ASSIGNED_TO_ME';
+          this.statusFilter = 'RESOLVED';
+        }
+        this.applyFilters();
+      })
+    );
 
     // Listen for new tickets
-    this.mockData.ticketCreated$.subscribe(() => {
-      this.tickets = this.mockData.getAllTickets();
-      this.applyFilters();
-    });
+    this.subscription.add(
+      this.ticketService.ticketCreated$.subscribe(() => {
+        this.loadTickets();
+      })
+    );
 
     // Listen for ticket updates (assignments, status changes)
-    this.mockData.ticketUpdated$.subscribe(() => {
-      this.tickets = this.mockData.getAllTickets();
-      this.applyFilters();
+    this.subscription.add(
+      this.ticketService.ticketUpdated$.subscribe(() => {
+        this.loadTickets();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+
+  loadTickets(): void {
+    this.isLoading = true;
+    this.ticketService.getAllTickets().subscribe({
+      next: (tickets) => {
+        this.isLoading = false;
+        this.tickets = tickets.filter(t => !t.deleted);
+        this.applyFilters();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -90,7 +122,7 @@ export class TicketQueueComponent implements OnInit {
           t.title.toLowerCase().includes(term) ||
           t.id.toString().includes(term) ||
           (t.assignedAgentName && t.assignedAgentName.toLowerCase().includes(term)) ||
-          this.mockData.getCustomerNameById(t.customerId).toLowerCase().includes(term)
+          (t.customerUsername && t.customerUsername.toLowerCase().includes(term))
       );
     }
 
@@ -134,11 +166,16 @@ export class TicketQueueComponent implements OnInit {
   assignToMe(ticketId: number, event: Event): void {
     event.preventDefault();
     event.stopPropagation();
-    this.mockData.assignTicket(ticketId, this.currentUserId);
+    this.ticketService.assignTicket(ticketId, this.currentUserId).subscribe({
+      next: () => {
+        this.loadTickets();
+      }
+    });
   }
 
   getCustomerName(customerId: number): string {
-    return this.mockData.getCustomerNameById(customerId);
+    const ticket = this.tickets.find(t => t.customerId === customerId);
+    return ticket?.customerUsername ?? `Customer #${customerId}`;
   }
 
   getStatusClass(status: TicketStatus): string {

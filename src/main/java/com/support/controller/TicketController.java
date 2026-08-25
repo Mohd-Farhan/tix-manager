@@ -35,6 +35,13 @@ public class TicketController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createTicket);
     }
 
+    @GetMapping
+    @PreAuthorize("hasRole('SUPPORT_AGENT') or hasRole('ADMIN')")
+    public ResponseEntity<List<TicketDTO>> getAllTickets() {
+        List<TicketDTO> ticketDTOs = ticketService.getAllActiveTickets();
+        return ResponseEntity.status(HttpStatus.OK).body(ticketDTOs);
+    }
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<TicketDTO>> getTicketsForUser(@PathVariable Long userId) {
         List<TicketDTO> ticketDTOs = ticketService.getTicketsForUser(userId);

@@ -12,10 +12,7 @@
 
   <!-- Controls -->
   <div class="controls-bar">
-    <div class="search-box">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" placeholder="Search by name, email, or ID..." [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" />
-    </div>
+    <app-search-box placeholder="Search by name, email, or ID..." [value]="searchTerm" (searchChange)="searchTerm = $event; onSearch()" />
     <div class="select-wrapper">
       <select [(ngModel)]="roleFilter" (ngModelChange)="onFilterChange()" class="filter-select">
         <option value="ALL">All Roles</option>
@@ -30,13 +27,10 @@
   <!-- Users Table -->
   <div class="table-container">
     @if (filteredUsers.length === 0) {
-    <div class="empty-state">
-      <div class="empty-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-      </div>
-      <h3>No users found</h3>
-      <p>Try adjusting your filters or search terms.</p>
-    </div>
+    <app-empty-state
+      icon='<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>'
+      title="No users found"
+      description="Try adjusting your filters or search terms." />
     } @else {
     <table class="user-table">
       <thead>
@@ -92,59 +86,45 @@
     }
   </div>
 
-  <!-- Add User Modal -->
-  @if (showAddUserModal) {
-  <div class="modal-overlay" (click)="closeAddUserModal()">
-    <div class="modal-window" (click)="$event.stopPropagation()" id="admin-add-user-modal">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <div class="modal-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-          </div>
-          <span class="modal-title">Add New User</span>
-        </div>
-        <button class="modal-close-btn" (click)="closeAddUserModal()" aria-label="Close">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        @if (formError) {
-        <div class="alert-message alert-error">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span>{{ formError }}</span>
-        </div>
-        }
-        @if (formSuccess) {
-        <div class="alert-message alert-success">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          <span>{{ formSuccess }}</span>
-        </div>
-        }
-        <div class="input-field-group">
-          <label class="input-label" for="new-user-name">Full Name</label>
-          <input type="text" id="new-user-name" class="text-input" [(ngModel)]="newUsername" placeholder="Enter full name" />
-        </div>
-        <div class="input-field-group">
-          <label class="input-label" for="new-user-email">Email Address</label>
-          <input type="email" id="new-user-email" class="text-input" [(ngModel)]="newEmail" placeholder="Enter email address" />
-        </div>
-        <div class="input-field-group">
-          <label class="input-label" for="new-user-role">Role</label>
-          <div class="select-wrapper full-width">
-            <select id="new-user-role" class="filter-select" [(ngModel)]="newRole">
-              @for (role of roles; track role.value) {
-              <option [value]="role.value">{{ role.label }}</option>
-              }
-            </select>
-            <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </div>
-        </div>
-        <div class="modal-form-actions">
-          <button class="btn-secondary" (click)="closeAddUserModal()">Cancel</button>
-          <button class="btn-primary" (click)="addUser()" id="admin-add-user-submit">Create User</button>
-        </div>
+  <app-modal-shell
+    [visible]="showAddUserModal"
+    title="Add New User"
+    icon='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>'
+    (closed)="closeAddUserModal()">
+    @if (formError) {
+    <div class="alert-message alert-error">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>{{ formError }}</span>
+    </div>
+    }
+    @if (formSuccess) {
+    <div class="alert-message alert-success">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <span>{{ formSuccess }}</span>
+    </div>
+    }
+    <div class="input-field-group">
+      <label class="input-label" for="new-user-name">Full Name</label>
+      <input type="text" id="new-user-name" class="text-input" [(ngModel)]="newUsername" placeholder="Enter full name" />
+    </div>
+    <div class="input-field-group">
+      <label class="input-label" for="new-user-email">Email Address</label>
+      <input type="email" id="new-user-email" class="text-input" [(ngModel)]="newEmail" placeholder="Enter email address" />
+    </div>
+    <div class="input-field-group">
+      <label class="input-label" for="new-user-role">Role</label>
+      <div class="select-wrapper full-width">
+        <select id="new-user-role" class="filter-select" [(ngModel)]="newRole">
+          @for (role of roles; track role.value) {
+          <option [value]="role.value">{{ role.label }}</option>
+          }
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </div>
     </div>
-  </div>
-  }
+    <div class="modal-form-actions">
+      <button class="btn-secondary" (click)="closeAddUserModal()">Cancel</button>
+      <button class="btn-primary" (click)="addUser()" id="admin-add-user-submit">Create User</button>
+    </div>
+  </app-modal-shell>
 </div>

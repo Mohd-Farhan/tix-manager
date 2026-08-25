@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, inject, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MockDataService } from '../../../services/mock-data.service';
+import { TicketService } from '../../../services/ticket.service';
+import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
 import { Message } from '../../../models/message.model';
 
@@ -15,7 +16,9 @@ import { Message } from '../../../models/message.model';
 })
 export class TicketDetailComponent implements OnInit, AfterViewChecked {
   private route = inject(ActivatedRoute);
-  private mockData = inject(MockDataService);
+  private ticketService = inject(TicketService);
+  private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('chatContainer') chatContainer!: ElementRef;
 
@@ -24,19 +27,38 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
   newMessage = '';
   currentUserId = 0;
   notFound = false;
+  isLoading = true;
+  isSending = false;
   private shouldScroll = false;
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.ticket = this.mockData.getTicketById(id);
-    this.currentUserId = this.mockData.getCurrentUser().id;
+    const user = this.authService.getCurrentUser();
+    this.currentUserId = user?.id || 0;
 
-    if (this.ticket) {
-      this.messages = this.mockData.getMessagesForTicket(id);
-      this.shouldScroll = true;
-    } else {
-      this.notFound = true;
-    }
+    this.ticketService.getTicketById(id).subscribe({
+      next: (ticket) => {
+        this.ticket = ticket;
+        this.isLoading = false;
+        this.loadMessages(id);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.notFound = true;
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadMessages(ticketId: number): void {
+    this.ticketService.getMessageThread(ticketId).subscribe({
+      next: (messages) => {
+        this.messages = messages;
+        this.shouldScroll = true;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   ngAfterViewChecked(): void {
@@ -47,12 +69,24 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
   }
 
   sendMessage(): void {
-    if (!this.newMessage.trim() || !this.ticket) return;
+    if (!this.newMessage.trim() || !this.ticket || this.isSending) return;
 
-    const msg = this.mockData.addMessage(this.ticket.id, this.newMessage.trim());
-    this.messages.push(msg);
-    this.newMessage = '';
-    this.shouldScroll = true;
+    const content = this.newMessage.trim();
+    this.isSending = true;
+
+    this.ticketService.addMessage(this.ticket.id, content).subscribe({
+      next: (msg) => {
+        this.messages.push(msg);
+        this.newMessage = '';
+        this.isSending = false;
+        this.shouldScroll = true;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isSending = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   onKeyDown(event: KeyboardEvent): void {

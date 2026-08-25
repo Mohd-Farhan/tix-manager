@@ -8,10 +8,7 @@
 
   <!-- Controls -->
   <div class="controls-bar">
-    <div class="search-box">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" placeholder="Search by ID, title, customer, agent..." [(ngModel)]="searchTerm" (ngModelChange)="onSearch()" />
-    </div>
+    <app-search-box placeholder="Search by ID, title, customer, agent..." [value]="searchTerm" (searchChange)="searchTerm = $event; onSearch()" />
     <div class="filters-group">
       <div class="select-wrapper">
         <select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()" class="filter-select">
@@ -56,13 +53,7 @@
   <!-- Table -->
   <div class="table-container">
     @if (filteredTickets.length === 0) {
-    <div class="empty-state">
-      <div class="empty-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </div>
-      <h3>No tickets found</h3>
-      <p>Try adjusting your filters or search terms.</p>
-    </div>
+    <app-empty-state title="No tickets found" description="Try adjusting your filters or search terms." />
     } @else {
     <table class="ticket-table">
       <thead>
@@ -89,13 +80,10 @@
             </div>
           </td>
           <td class="col-status">
-            <span class="status-badge" [ngClass]="getStatusClass(ticket.status)">{{ getStatusLabel(ticket.status) }}</span>
+            <app-status-badge [status]="ticket.status" />
           </td>
           <td class="col-priority">
-            <div class="priority-cell">
-              <span class="priority-dot" [ngClass]="getPriorityClass(ticket.priority)"></span>
-              <span>{{ ticket.priority }}</span>
-            </div>
+            <app-priority-badge [priority]="ticket.priority" />
           </td>
           <td class="col-agent">
             <div class="reassign-wrapper">
@@ -127,22 +115,12 @@
     }
   </div>
 
-  <!-- Delete Confirmation Modal -->
-  @if (confirmDeleteId) {
-  <div class="modal-overlay" (click)="cancelDelete()">
-    <div class="modal-window confirm-modal" (click)="$event.stopPropagation()">
-      <div class="confirm-content">
-        <div class="confirm-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </div>
-        <h3>Delete Ticket #{{ confirmDeleteId }}?</h3>
-        <p>This action cannot be undone. The ticket and all its data will be permanently removed.</p>
-        <div class="confirm-actions">
-          <button class="btn-secondary" (click)="cancelDelete()">Cancel</button>
-          <button class="btn-danger" (click)="executeDelete()">Delete Ticket</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  }
+  <app-confirm-dialog
+    [visible]="confirmDeleteId !== null"
+    [title]="'Delete Ticket #' + confirmDeleteId + '?'"
+    message="This action cannot be undone. The ticket and all its data will be permanently removed."
+    confirmLabel="Delete Ticket"
+    variant="danger"
+    (confirmed)="executeDelete()"
+    (cancelled)="cancelDelete()" />
 </div>

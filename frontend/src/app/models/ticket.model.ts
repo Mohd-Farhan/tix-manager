@@ -17,6 +17,7 @@ export interface Ticket {
   status: TicketStatus;
   priority: TicketPriority;
   customerId: number;
+  customerUsername?: string;
   assignedAgentId?: number;
   assignedAgentName?: string;
   createdAt: string;

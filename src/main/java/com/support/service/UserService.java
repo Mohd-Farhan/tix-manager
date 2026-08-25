@@ -78,6 +78,11 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public List<UserDTO> getUsersByRole(com.support.entity.UserRole role) {
+        List<User> users = userRepository.findByRole(role);
+        return userMapper.toDTOList(users);
+    }
+
     public List<UserDTO> getAllUsers() {
         List<User> users = userRepository.findAll();
         return userMapper.toDTOList(users);

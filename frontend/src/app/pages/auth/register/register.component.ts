@@ -2,6 +2,8 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { AuthService } from '../../../services/auth.service';
+import { UserRole } from '../../../models/user.model';
 
 @Component({
   selector: 'app-register',
@@ -13,6 +15,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractContro
 export class RegisterComponent implements OnInit {
   private fb = inject(FormBuilder);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
   registerForm!: FormGroup;
   showPassword = false;
@@ -77,16 +80,19 @@ export class RegisterComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Build the payload matching UserDTO: { username, email, password, role }
     const { username, email, password, role } = this.registerForm.value;
-    const payload = { username, email, password, role };
-    console.log('Register payload:', payload);
+    const payload = { username, email, password, role: role as UserRole };
 
-    // TODO: Connect to AuthService -> POST /api/auth/register
-    setTimeout(() => {
-      this.isLoading = false;
-      // On success: this.router.navigate(['/auth/login']);
-    }, 1500);
+    this.authService.register(payload).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.router.navigate(['/auth/login'], { queryParams: { registered: 'true' } });
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.errorMessage = err.error?.message || err.error || 'Registration failed. Please try again.';
+      },
+    });
   }
 
   get f() {

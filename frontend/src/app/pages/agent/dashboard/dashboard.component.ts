@@ -1,9 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { MockDataService } from '../../../services/mock-data.service';
+import { TicketService } from '../../../services/ticket.service';
+import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketPriority, TicketStatus } from '../../../models/ticket.model';
-import { User } from '../../../models/user.model';
+import { User, UserRole } from '../../../models/user.model';
 
 @Component({
   selector: 'app-agent-dashboard',
@@ -13,38 +14,72 @@ import { User } from '../../../models/user.model';
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent implements OnInit {
-  private mockData = inject(MockDataService);
+  private ticketService = inject(TicketService);
+  private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
   
-  user!: User;
+  user: User = this.authService.getCurrentUser() || {
+    id: 2,
+    username: 'Agent',
+    email: '',
+    role: UserRole.SUPPORT_AGENT
+  };
   stats = { unassigned: 0, myOpen: 0, myInProgress: 0, myResolved: 0, totalAll: 0 };
   unassignedTickets: Ticket[] = [];
   myRecentTickets: Ticket[] = [];
+  isLoading = true;
 
   ngOnInit(): void {
-    this.user = this.mockData.getCurrentUser();
+    const u = this.authService.getCurrentUser();
+    if (u) this.user = u;
     this.loadDashboardData();
   }
 
   private loadDashboardData(): void {
-    this.stats = this.mockData.getAgentStats(this.user.id);
-    
-    // Get up to 5 unassigned tickets for quick action
-    this.unassignedTickets = this.mockData.getUnassignedTickets()
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5);
+    this.isLoading = true;
+    this.ticketService.getAllTickets().subscribe({
+      next: (tickets) => {
+        this.isLoading = false;
+        const allActive = tickets.filter(t => !t.deleted);
+        const myTickets = allActive.filter(t => t.assignedAgentId === this.user.id);
 
-    // Get up to 5 of my recent open/in-progress tickets
-    this.myRecentTickets = this.mockData.getAgentAssignedTickets(this.user.id)
-      .filter(t => t.status !== TicketStatus.RESOLVED)
-      .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-      .slice(0, 5);
+        this.stats = {
+          unassigned: allActive.filter(t => !t.assignedAgentId && t.status === TicketStatus.OPEN).length,
+          myOpen: myTickets.filter(t => t.status === TicketStatus.OPEN).length,
+          myInProgress: myTickets.filter(t => t.status === TicketStatus.IN_PROGRESS).length,
+          myResolved: myTickets.filter(t => t.status === TicketStatus.RESOLVED).length,
+          totalAll: allActive.length,
+        };
+
+        // Unassigned tickets
+        this.unassignedTickets = allActive
+          .filter(t => !t.assignedAgentId && t.status === TicketStatus.OPEN)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 5);
+
+        // My recent non-resolved tickets
+        this.myRecentTickets = myTickets
+          .filter(t => t.status !== TicketStatus.RESOLVED)
+          .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+          .slice(0, 5);
+
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   assignToMe(ticketId: number, event: Event): void {
     event.preventDefault();
     event.stopPropagation();
-    this.mockData.assignTicket(ticketId, this.user.id);
-    this.loadDashboardData(); // Refresh lists
+    this.ticketService.assignTicket(ticketId, this.user.id).subscribe({
+      next: () => {
+        this.loadDashboardData();
+      }
+    });
   }
 
   getStatusClass(status: TicketStatus): string {

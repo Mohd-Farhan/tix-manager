@@ -1,16 +1,18 @@
-import { Component, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ToggleSwitchComponent } from '../../../shared/components/toggle-switch/toggle-switch.component';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-admin-system-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ToggleSwitchComponent],
   templateUrl: './system-settings.component.html',
   styleUrl: './system-settings.component.css',
 })
 export class SystemSettingsComponent {
-  private cdr = inject(ChangeDetectorRef);
+  private toast = inject(ToastService);
 
   // General
   systemName = 'TixManager';
@@ -29,29 +31,15 @@ export class SystemSettingsComponent {
   sessionTimeoutMinutes = 60;
   enforce2FA = false;
 
-  // Toast
-  toastMessage = '';
-  toastVisible = false;
-
   saveGeneral(): void {
-    this.showToast('General settings saved successfully.');
+    this.toast.success('General settings saved successfully.');
   }
 
   saveNotifications(): void {
-    this.showToast('Notification settings saved successfully.');
+    this.toast.success('Notification settings saved successfully.');
   }
 
   saveSecurity(): void {
-    this.showToast('Security settings saved successfully.');
-  }
-
-  private showToast(message: string): void {
-    this.toastMessage = message;
-    this.toastVisible = true;
-    this.cdr.detectChanges();
-    setTimeout(() => {
-      this.toastVisible = false;
-      this.cdr.detectChanges();
-    }, 3000);
+    this.toast.success('Security settings saved successfully.');
   }
 }
