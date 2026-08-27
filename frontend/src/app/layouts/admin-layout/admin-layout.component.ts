@@ -5,13 +5,14 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { User, UserRole } from '../../models/user.model';
+import { LogoComponent } from '../../shared/components/logo/logo.component';
 
 export type AdminModalType = 'profile' | 'preferences' | 'password' | null;
 
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent],
   templateUrl: './admin-layout.component.html',
   styleUrl: './admin-layout.component.css',
 })

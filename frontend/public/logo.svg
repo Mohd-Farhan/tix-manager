@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 865 137" width="100%" height="100%">
+  <style>
+    .tix-part { fill: var(--primary, #0a192f); }
+    .mgr-part { fill: var(--secondary, #0058be); }
+    :root[data-theme="dark"] .tix-part { fill: var(--primary, #adc6ff); }
+    :root[data-theme="dark"] .mgr-part { fill: var(--secondary, #79abeb); }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .tix-part { fill: #adc6ff; }
+      :root:not([data-theme="light"]) .mgr-part { fill: #79abeb; }
+    }
+  </style>
+  <defs>
+    <mask id="tix-logo-mask">
+      <image href="/logo-azure.png" width="865" height="137" />
+    </mask>
+  </defs>
+  <rect class="tix-part" x="0" y="0" width="220" height="137" mask="url(#tix-logo-mask)" />
+  <rect class="mgr-part" x="215" y="0" width="650" height="137" mask="url(#tix-logo-mask)" />
+</svg>

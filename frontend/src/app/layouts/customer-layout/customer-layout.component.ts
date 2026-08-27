@@ -7,13 +7,14 @@ import { AuthService } from '../../services/auth.service';
 import { TicketService } from '../../services/ticket.service';
 import { User, UserRole } from '../../models/user.model';
 import { TicketPriority } from '../../models/ticket.model';
+import { LogoComponent } from '../../shared/components/logo/logo.component';
 
 export type ActiveModalType = 'profile' | 'preferences' | 'password' | 'create-ticket' | null;
 
 @Component({
   selector: 'app-customer-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent],
   templateUrl: './customer-layout.component.html',
   styleUrl: './customer-layout.component.css',
 })

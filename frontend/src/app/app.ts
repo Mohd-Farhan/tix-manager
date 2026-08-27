@@ -9,5 +9,5 @@ import { ToastComponent } from './shared/components/toast/toast.component';
   styleUrl: './app.css'
 })
 export class App {
-  protected readonly title = signal('tixmanager');
+  readonly title = signal('tixmanager');
 }

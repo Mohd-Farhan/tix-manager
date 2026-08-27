@@ -7,6 +7,8 @@ export { EmptyStateComponent } from './components/empty-state/empty-state.compon
 export { SearchBoxComponent } from './components/search-box/search-box.component';
 export { ToggleSwitchComponent } from './components/toggle-switch/toggle-switch.component';
 export { ModalShellComponent } from './components/modal-shell/modal-shell.component';
+export { LogoComponent } from './components/logo/logo.component';
+export type { LogoVariant, LogoSize, LogoColorMode } from './components/logo/logo.component';
 
 // Shared Services
 export { ToastService } from './services/toast.service';

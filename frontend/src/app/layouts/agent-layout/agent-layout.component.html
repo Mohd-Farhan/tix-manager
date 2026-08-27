@@ -6,14 +6,8 @@
 <!-- Sidebar -->
 <aside class="sidebar" [class.open]="sidebarOpen" id="agent-sidebar">
   <div class="sidebar-header">
-    <a routerLink="/agent/dashboard" class="sidebar-brand" (click)="closeSidebar()">
-      <div class="brand-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-        </svg>
-      </div>
-      <span class="brand-text">TixManager</span>
+    <a routerLink="/agent/dashboard" class="sidebar-brand" (click)="closeSidebar()" aria-label="TixManager Agent Dashboard">
+      <app-logo size="sm"></app-logo>
     </a>
     <span class="role-badge-sidebar">Agent</span>
   </div>

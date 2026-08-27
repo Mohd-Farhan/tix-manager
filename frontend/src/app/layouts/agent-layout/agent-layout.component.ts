@@ -5,13 +5,14 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { User, UserRole } from '../../models/user.model';
+import { LogoComponent } from '../../shared/components/logo/logo.component';
 
 export type AgentModalType = 'profile' | 'preferences' | 'password' | null;
 
 @Component({
   selector: 'app-agent-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent],
   templateUrl: './agent-layout.component.html',
   styleUrl: './agent-layout.component.css',
 })

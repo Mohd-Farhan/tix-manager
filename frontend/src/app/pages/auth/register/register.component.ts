@@ -4,11 +4,12 @@ import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { AuthService } from '../../../services/auth.service';
 import { UserRole } from '../../../models/user.model';
+import { LogoComponent } from '../../../shared/components/logo/logo.component';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, LogoComponent],
   templateUrl: './register.component.html',
   styleUrl: './register.component.css',
 })

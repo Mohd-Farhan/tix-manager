@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 865 137" width="100%" height="100%">
+  <defs>
+    <mask id="logo-mask-dark">
+      <image href="/logo-dark.png" width="865" height="137" />
+    </mask>
+  </defs>
+  <!-- TIX in Light Ice Blue (#adc6ff) -->
+  <rect x="0" y="0" width="220" height="137" fill="#adc6ff" mask="url(#logo-mask-dark)" />
+  <!-- MANAGER in Sky Blue (#79abeb) -->
+  <rect x="215" y="0" width="650" height="137" fill="#79abeb" mask="url(#logo-mask-dark)" />
+</svg>

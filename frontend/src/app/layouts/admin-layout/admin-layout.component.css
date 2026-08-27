@@ -26,6 +26,9 @@
 .sidebar-header {
   padding: 1.25rem 1.25rem 1rem;
   border-bottom: 1px solid var(--outline-variant);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .sidebar-brand {

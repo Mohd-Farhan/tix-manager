@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 215 137" width="100%" height="100%">
+  <style>
+    .icon-part { fill: var(--secondary, #0058be); }
+    :root[data-theme="dark"] .icon-part { fill: var(--secondary, #79abeb); }
+  </style>
+  <defs>
+    <mask id="tix-icon-mask">
+      <image href="/logo-azure.png" width="865" height="137" x="0" y="0" />
+    </mask>
+  </defs>
+  <rect class="icon-part" x="0" y="0" width="215" height="137" mask="url(#tix-icon-mask)" />
+</svg>

@@ -1,14 +1,8 @@
 <!-- ========== NAVBAR ========== -->
 <nav class="navbar" id="landing-navbar">
   <div class="nav-container">
-    <a routerLink="/" class="nav-brand" id="nav-brand-link">
-      <div class="brand-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-        </svg>
-      </div>
-      <span class="brand-text">TixManager</span>
+    <a routerLink="/" class="nav-brand" id="nav-brand-link" aria-label="TixManager Home">
+      <app-logo size="md"></app-logo>
     </a>
 
     <div class="nav-actions">
@@ -138,13 +132,7 @@
 <footer class="footer" id="landing-footer">
   <div class="footer-container">
     <div class="footer-brand">
-      <div class="brand-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-        </svg>
-      </div>
-      <span>TixManager</span>
+      <app-logo size="sm"></app-logo>
     </div>
     <p class="footer-copy">© {{ currentYear }} TixManager. Built with Angular & Spring Boot.</p>
   </div>

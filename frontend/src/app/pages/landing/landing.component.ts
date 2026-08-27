@@ -1,11 +1,12 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef, NgZone, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { LogoComponent } from '../../shared/components/logo/logo.component';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LogoComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css',
 })
