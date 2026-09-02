@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { UserService } from '../../../services/user.service';
 import { User, UserRole } from '../../../models/user.model';
 
 @Component({
@@ -14,6 +15,7 @@ import { User, UserRole } from '../../../models/user.model';
 })
 export class ProfileComponent implements OnInit, AfterViewInit {
   private authService = inject(AuthService);
+  private userService = inject(UserService);
   private route = inject(ActivatedRoute);
 
   user: User = this.authService.getCurrentUser() || {
@@ -100,11 +102,17 @@ export class ProfileComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Mock success
-    this.showPasswordMessage('Password updated successfully.', false);
-    this.currentPassword = '';
-    this.newPassword = '';
-    this.confirmPassword = '';
+    this.userService.updatePassword(this.user.id, this.currentPassword, this.newPassword).subscribe({
+      next: () => {
+        this.showPasswordMessage('Password updated successfully.', false);
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.confirmPassword = '';
+      },
+      error: (err) => {
+        this.showPasswordMessage(err.error?.message || 'Failed to update password.', true);
+      }
+    });
   }
 
   private showPasswordMessage(msg: string, isError: boolean): void {

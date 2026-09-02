@@ -7,19 +7,29 @@ import com.support.mapper.UserMapper;
 import com.support.security.JwtService;
 import com.support.security.UserDetailsImpl;
 import com.support.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * ==============================================================================================
+ * REST CONTROLLER: AuthController
+ * ==============================================================================================
+ * 
+ * Manages user registration and JWT authentication token issuance.
+ */
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication", description = "Endpoints for user registration and JWT login")
 public class AuthController {
 
     @Autowired
@@ -34,39 +44,45 @@ public class AuthController {
     @Autowired
     private UserMapper userMapper;
 
+    @Operation(summary = "Register a new user account", description = "Creates a new user profile with encrypted password and returns the created user entity.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "User registered successfully"),
+            @ApiResponse(responseCode = "400", description = "Validation failed on payload"),
+            @ApiResponse(responseCode = "409", description = "Username or email already exists")
+    })
     @PostMapping("/register")
     public ResponseEntity<UserDTO> registerUser(@Valid @RequestBody UserDTO userDto) {
         UserDTO createdUser = userService.registerUser(userDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
+    @Operation(summary = "Authenticate user credentials", description = "Validates username and password, then returns a signed stateless JWT token with user details.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Authenticated successfully, returns JWT"),
+            @ApiResponse(responseCode = "400", description = "Missing or malformed credentials"),
+            @ApiResponse(responseCode = "401", description = "Invalid username or password")
+    })
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO) {
-        try {
-            // Step 1: Authenticate the user's credentials
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginDTO.getUsername(),
-                            loginDTO.getPassword()));
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginDTO loginDTO) {
+        // Step 1: Authenticate the user's credentials against DaoAuthenticationProvider
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginDTO.getUsername(),
+                        loginDTO.getPassword()));
 
-            // Step 2: Extract authenticated user details
-            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        // Step 2: Extract authenticated user details
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-            // Step 3: Generate JWT token
-            String token = jwtService.generateToken(userDetails);
+        // Step 3: Generate stateless HMAC-SHA256 JWT token
+        String token = jwtService.generateToken(userDetails);
 
-            // Step 4: Build and return the response
-            UserDTO userDto = userMapper.toDTO(userDetails.getUser());
-            AuthResponse response = AuthResponse.builder()
-                    .token(token)
-                    .user(userDto)
-                    .build();
+        // Step 4: Build and return the response envelope
+        UserDTO userDto = userMapper.toDTO(userDetails.getUser());
+        AuthResponse response = AuthResponse.builder()
+                .token(token)
+                .user(userDto)
+                .build();
 
-            return ResponseEntity.ok(response);
-
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
-        }
+        return ResponseEntity.ok(response);
     }
 }
-

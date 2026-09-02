@@ -23,6 +23,17 @@ export class UserService {
     return this.http.get<User[]>(`${this.apiUrl}/admin/all`);
   }
 
+  updatePassword(userId: number, currentPassword: string, newPassword: string): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/${userId}/password`, {
+      currentPassword,
+      newPassword,
+    });
+  }
+
+  updateProfile(userId: number, data: Partial<User>): Observable<User> {
+    return this.http.put<User>(`${this.apiUrl}/${userId}`, data);
+  }
+
   softDeleteUser(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }

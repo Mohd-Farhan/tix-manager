@@ -5,6 +5,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { TicketService } from '../../services/ticket.service';
+import { UserService } from '../../services/user.service';
 import { User, UserRole } from '../../models/user.model';
 import { TicketPriority } from '../../models/ticket.model';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
@@ -21,6 +22,7 @@ export type ActiveModalType = 'profile' | 'preferences' | 'password' | 'create-t
 export class CustomerLayoutComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private ticketService = inject(TicketService);
+  private userService = inject(UserService);
   private router = inject(Router);
   private elementRef = inject(ElementRef);
   private cdr = inject(ChangeDetectorRef);
@@ -194,17 +196,23 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.showPasswordMessage('Password updated successfully.', false);
-    this.currentPassword = '';
-    this.newPassword = '';
-    this.confirmPassword = '';
-    this.cdr.detectChanges();
+    this.userService.updatePassword(this.user.id, this.currentPassword, this.newPassword).subscribe({
+      next: () => {
+        this.showPasswordMessage('Password updated successfully.', false);
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.confirmPassword = '';
+        this.cdr.detectChanges();
 
-    setTimeout(() => {
-      if (!this.passwordError) {
-        this.closeModal();
+        setTimeout(() => {
+          this.closeModal();
+        }, 1000);
+      },
+      error: (err) => {
+        this.showPasswordMessage(err.error?.message || 'Failed to update password.', true);
+        this.cdr.detectChanges();
       }
-    }, 1000);
+    });
   }
 
   private showPasswordMessage(msg: string, isError: boolean): void {

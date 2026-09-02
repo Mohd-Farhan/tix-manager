@@ -1,18 +1,20 @@
 package com.support.service;
 
+import com.support.dto.PasswordChangeDTO;
 import com.support.dto.UserDTO;
 import com.support.entity.User;
+import com.support.entity.UserRole;
+import com.support.exception.DuplicateResourceException;
+import com.support.exception.InvalidOperationException;
+import com.support.exception.ResourceNotFoundException;
 import com.support.mapper.UserMapper;
 import com.support.repository.UserRepository;
-
-import jakarta.persistence.EntityNotFoundException;
-
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class UserService {
@@ -30,10 +32,10 @@ public class UserService {
         User user = userMapper.toEntity(dto);
 
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
-            throw new RuntimeException("Username already exists");
+            throw new DuplicateResourceException("User", "username", user.getUsername());
         }
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already exists");
+            throw new DuplicateResourceException("User", "email", user.getEmail());
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -50,14 +52,14 @@ public class UserService {
 
     public UserDTO findById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
         return userMapper.toDTO(user);
     }
 
     public UserDTO updateUser(Long id, UserDTO dto) {
         User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
         userMapper.updateEntityFromDTO(dto, existingUser);
 
@@ -69,16 +71,27 @@ public class UserService {
         return userMapper.toDTO(existingUser);
     }
 
-    public void softDeleteUser(Long userId) {
-
+    public void updatePassword(Long userId, PasswordChangeDTO dto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id:" + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+            throw new InvalidOperationException("Current password does not match.");
+        }
+
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    public void softDeleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         user.setDeleted(true);
         userRepository.save(user);
     }
 
-    public List<UserDTO> getUsersByRole(com.support.entity.UserRole role) {
+    public List<UserDTO> getUsersByRole(UserRole role) {
         List<User> users = userRepository.findByRole(role);
         return userMapper.toDTOList(users);
     }
@@ -92,5 +105,4 @@ public class UserService {
         List<User> users = userRepository.findAllIncludingDeleted();
         return userMapper.toDTOList(users);
     }
-
 }
