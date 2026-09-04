@@ -1,0 +1,134 @@
+.toast-viewport {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 24rem;
+  width: calc(100vw - 2.5rem);
+  pointer-events: none;
+}
+
+.toast-card {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-surface, #0a1220);
+  color: var(--color-on-surface, #e0e3e5);
+  border: 1px solid var(--color-outline-variant, #29354d);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  animation: toast-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-icon-wrapper {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.toast-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  margin-bottom: 0.125rem;
+}
+
+.toast-message {
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  color: var(--color-on-surface-variant, #a0a8b8);
+  word-break: break-word;
+}
+
+.toast-close-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-on-surface-variant, #a0a8b8);
+  cursor: pointer;
+  padding: 0.125rem;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.toast-close-btn:hover {
+  color: var(--color-on-surface, #e0e3e5);
+  background-color: var(--color-surface-variant, #1e2b40);
+}
+
+.toast-close-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Toast Color Variants (Azure Professional Color Palette) */
+.toast-success {
+  border-left: 4px solid #34d399;
+}
+.toast-success .toast-icon {
+  color: #34d399;
+}
+.toast-success .toast-title {
+  color: #34d399;
+}
+
+.toast-error {
+  border-left: 4px solid var(--color-error, #ffb4ab);
+  background-color: rgba(147, 0, 10, 0.15);
+}
+.toast-error .toast-icon {
+  color: var(--color-error, #ffb4ab);
+}
+.toast-error .toast-title {
+  color: var(--color-error, #ffb4ab);
+}
+
+.toast-warning {
+  border-left: 4px solid #fbbf24;
+}
+.toast-warning .toast-icon {
+  color: #fbbf24;
+}
+.toast-warning .toast-title {
+  color: #fbbf24;
+}
+
+.toast-info {
+  border-left: 4px solid var(--color-secondary, #79abeb);
+}
+.toast-info .toast-icon {
+  color: var(--color-secondary, #79abeb);
+}
+.toast-info .toast-title {
+  color: var(--color-secondary, #79abeb);
+}
