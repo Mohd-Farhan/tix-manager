@@ -14,9 +14,9 @@ import com.support.entity.TicketStatus;
  * REPOSITORY: TicketStatusHistoryRepository
  * ==============================================================================================
  * 
- * WHY QUERY OPTIMIZATION & @EntityGraph ARE USED:
- * - `@EntityGraph(attributePaths = {"changedBy"})` loads the actor who triggered the transition
- *   eagerly in a single JOIN.
+ * TARGETED @EntityGraph USAGE:
+ * - Applied only to `findByTicketIdOrderByChangedAtAsc` to avoid N queries for changedBy user
+ *   when rendering multi-entry audit timelines.
  */
 @Repository
 public interface TicketStatusHistoryRepository extends JpaRepository<TicketStatusHistory, Long> {
@@ -26,6 +26,5 @@ public interface TicketStatusHistoryRepository extends JpaRepository<TicketStatu
 
     List<TicketStatusHistory> findByNewStatus(TicketStatus newStatus);
 
-    @EntityGraph(attributePaths = {"changedBy"})
     TicketStatusHistory findTop1ByTicketIdOrderByChangedAtDesc(Long ticketId);
 }
