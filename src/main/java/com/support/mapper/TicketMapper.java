@@ -58,6 +58,7 @@ public interface TicketMapper {
      * and set explicitly by the business service layer.
      */
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "customer", ignore = true)
     @Mapping(target = "assignedAgent", ignore = true)
@@ -72,6 +73,7 @@ public interface TicketMapper {
      * Ignores null values when updating existing entities.
      */
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "customer", ignore = true)
     @Mapping(target = "assignedAgent", ignore = true)

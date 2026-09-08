@@ -79,6 +79,29 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 2b. HANDLER: ObjectOptimisticLockingFailureException & OptimisticLockException
+     * HTTP STATUS: 409 Conflict
+     * WHY (Concurrency & Race Condition Prevention): 
+     *      Triggered when two concurrent transactions try to modify the same ticket simultaneously.
+     *      Rather than overwriting the previous update ("lost update" anomaly), Hibernate's @Version
+     *      check aborts the second update and notifies the client to refresh.
+     */
+    @ExceptionHandler({
+            org.springframework.orm.ObjectOptimisticLockingFailureException.class,
+            jakarta.persistence.OptimisticLockException.class
+    })
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailure(Exception ex, HttpServletRequest request) {
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("Concurrent Modification Conflict")
+                .message("This ticket was updated by another user or agent in the background. Please refresh and try again.")
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    /**
      * 3. HANDLER: InvalidOperationException & IllegalArgumentException
      * HTTP STATUS: 400 Bad Request
      * WHY: Triggered when a requested business operation is illegal

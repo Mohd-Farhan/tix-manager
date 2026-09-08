@@ -10,13 +10,28 @@ import com.support.exception.ResourceNotFoundException;
 import com.support.mapper.UserMapper;
 import com.support.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * ==============================================================================================
+ * SERVICE: UserService
+ * ==============================================================================================
+ * 
+ * WHY TRANSACTIONAL BOUNDARIES & READ-ONLY OPTIMIZATIONS ARE APPLIED:
+ * 1. Read-Only Transaction Default (@Transactional(readOnly = true)):
+ *    - Reduces overhead on user lookups, authentication queries, and user lists.
+ * 2. Explicit Mutation Transactions (@Transactional):
+ *    - Ensures atomic user registration, password updates, and soft deletions.
+ */
 @Service
+@Transactional(readOnly = true)
 public class UserService {
 
     @Autowired
@@ -28,6 +43,7 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Transactional
     public UserDTO registerUser(UserDTO dto) {
         User user = userMapper.toEntity(dto);
 
@@ -57,6 +73,7 @@ public class UserService {
         return userMapper.toDTO(user);
     }
 
+    @Transactional
     public UserDTO updateUser(Long id, UserDTO dto) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
@@ -71,6 +88,7 @@ public class UserService {
         return userMapper.toDTO(existingUser);
     }
 
+    @Transactional
     public void updatePassword(Long userId, PasswordChangeDTO dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
@@ -83,6 +101,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional
     public void softDeleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
@@ -96,9 +115,17 @@ public class UserService {
         return userMapper.toDTOList(users);
     }
 
+    public Page<UserDTO> getUsersByRole(UserRole role, Pageable pageable) {
+        return userRepository.findByRole(role, pageable).map(userMapper::toDTO);
+    }
+
     public List<UserDTO> getAllUsers() {
         List<User> users = userRepository.findAll();
         return userMapper.toDTOList(users);
+    }
+
+    public Page<UserDTO> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable).map(userMapper::toDTO);
     }
 
     public List<UserDTO> getAllUsersIncludingDeleted() {

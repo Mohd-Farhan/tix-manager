@@ -7,8 +7,19 @@ import java.time.LocalDateTime;
 
 import lombok.*;
 
+/**
+ * ==============================================================================================
+ * ENTITY: Message (Ticket Thread Conversation Entry)
+ * ==============================================================================================
+ * 
+ * WHY THIS DATABASE DESIGN:
+ * - `idx_message_ticket_id`: Fast retrieval of conversation threads by ticket ID.
+ * - Single index on ticket_id is sufficient since messages are always loaded per ticket.
+ */
 @Entity
-@Table(name = "messages")
+@Table(name = "messages", indexes = {
+    @Index(name = "idx_message_ticket_id", columnList = "ticket_id")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

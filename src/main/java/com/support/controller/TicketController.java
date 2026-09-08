@@ -13,7 +13,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -77,6 +82,21 @@ public class TicketController {
         return ResponseEntity.status(HttpStatus.OK).body(tickets);
     }
 
+    @Operation(summary = "Get paginated active tickets", description = "Returns pageable active tickets with configurable page size, number, and sort order.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Page of active tickets retrieved"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires SUPPORT_AGENT or ADMIN role")
+    })
+    @GetMapping("/paged")
+    @PreAuthorize("hasRole('SUPPORT_AGENT') or hasRole('ADMIN')")
+    public ResponseEntity<Page<TicketResponse>> getAllTicketsPaged(
+            @ParameterObject
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        Page<TicketResponse> page = ticketService.getAllActiveTickets(pageable);
+        return ResponseEntity.status(HttpStatus.OK).body(page);
+    }
+
     @Operation(summary = "Get tickets for a specific user", description = "Retrieves tickets owned by or assigned to a user.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User tickets retrieved"),
@@ -87,6 +107,22 @@ public class TicketController {
     public ResponseEntity<List<TicketResponse>> getTicketsForUser(@PathVariable Long userId) {
         List<TicketResponse> tickets = ticketService.getTicketsForUser(userId);
         return ResponseEntity.status(HttpStatus.OK).body(tickets);
+    }
+
+    @Operation(summary = "Get paginated tickets for a specific user", description = "Retrieves paginated tickets owned by or assigned to a user.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User paginated tickets retrieved"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Cannot view another user's tickets")
+    })
+    @GetMapping("/user/{userId}/paged")
+    @PreAuthorize("hasRole('SUPPORT_AGENT') or hasRole('ADMIN') or #userId == authentication.principal.id")
+    public ResponseEntity<Page<TicketResponse>> getTicketsForUserPaged(
+            @PathVariable Long userId,
+            @ParameterObject
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        Page<TicketResponse> page = ticketService.getTicketsForUser(userId, pageable);
+        return ResponseEntity.status(HttpStatus.OK).body(page);
     }
 
     // NOTE: Ticket ownership & access control is enforced via custom SpEL evaluator bean.

@@ -5,8 +5,18 @@ import java.time.LocalDateTime;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * ==============================================================================================
+ * ENTITY: TicketStatusHistory (State Transition Audit Log)
+ * ==============================================================================================
+ * 
+ * WHY THIS DATABASE DESIGN:
+ * - `idx_tsh_ticket_id`: Fast retrieval of complete status audit timeline for any specific ticket.
+ */
 @Entity
-@Table(name = "ticket_status_history")
+@Table(name = "ticket_status_history", indexes = {
+    @Index(name = "idx_tsh_ticket_id", columnList = "ticket_id")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

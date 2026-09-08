@@ -153,4 +153,19 @@ class TicketControllerTest {
                 .andExpect(jsonPath("$.id").value(99))
                 .andExpect(jsonPath("$.content").value("Checking on the status"));
     }
+
+    /**
+     * TEST CASE 5: Concurrent update throws ObjectOptimisticLockingFailureException -> 409 Conflict.
+     */
+    @Test
+    @DisplayName("PUT /api/tickets/{id}/assign — Concurrent modification returns 409 CONFLICT")
+    void testAssignTicket_ConcurrentModification_Returns409() throws Exception {
+        when(ticketService.assignTicket(10L, 3L))
+                .thenThrow(new org.springframework.orm.ObjectOptimisticLockingFailureException(com.support.entity.Ticket.class, 10L));
+
+        mockMvc.perform(put("/api/tickets/10/assign?agentId=3"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Concurrent Modification Conflict"))
+                .andExpect(jsonPath("$.message").value("This ticket was updated by another user or agent in the background. Please refresh and try again."));
+    }
 }
