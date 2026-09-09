@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../../services/user.service';
 import { AuthService } from '../../../services/auth.service';
-import { User, UserRole } from '../../../models/user.model';
+import { User, UserRole, BulkUploadResult } from '../../../models/user.model';
 import { SearchBoxComponent } from '../../../shared/components/search-box/search-box.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ModalShellComponent } from '../../../shared/components/modal-shell/modal-shell.component';
@@ -22,28 +22,61 @@ export class UserManagementComponent implements OnInit {
   private toast = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
 
+  currentUser: User | null = null;
   users: User[] = [];
   filteredUsers: User[] = [];
   searchTerm = '';
   roleFilter = 'ALL';
   showAddUserModal = false;
+  showBulkModal = false;
   isLoading = true;
 
   // Add user form
   newUsername = '';
   newEmail = '';
+  newPassword = '';
   newRole: UserRole = UserRole.CUSTOMER;
   formError = '';
   formSuccess = '';
 
-  roles = [
-    { value: UserRole.CUSTOMER, label: 'Customer' },
-    { value: UserRole.SUPPORT_AGENT, label: 'Support Agent' },
-    { value: UserRole.ADMIN, label: 'Admin' },
-  ];
+  // Bulk upload
+  selectedFile: File | null = null;
+  isBulkUploading = false;
+  bulkResult: BulkUploadResult | null = null;
+  bulkError = '';
 
   ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
     this.loadUsers();
+  }
+
+  get isSystemAdmin(): boolean {
+    return this.currentUser?.role === UserRole.SYSTEM_ADMIN;
+  }
+
+  get availableRolesForCreation(): { value: UserRole; label: string }[] {
+    if (this.isSystemAdmin) {
+      return [
+        { value: UserRole.CUSTOMER, label: 'Customer' },
+        { value: UserRole.SUPPORT_AGENT, label: 'Support Agent' },
+        { value: UserRole.ADMIN, label: 'Admin' },
+        { value: UserRole.SYSTEM_ADMIN, label: 'System Admin' },
+      ];
+    }
+    return [
+      { value: UserRole.CUSTOMER, label: 'Customer' },
+      { value: UserRole.SUPPORT_AGENT, label: 'Support Agent' },
+    ];
+  }
+
+  canModifyUser(user: User): boolean {
+    if (this.currentUser?.id === user.id) {
+      return false;
+    }
+    if (!this.isSystemAdmin && (user.role === UserRole.ADMIN || user.role === UserRole.SYSTEM_ADMIN)) {
+      return false;
+    }
+    return true;
   }
 
   loadUsers(): void {
@@ -91,6 +124,7 @@ export class UserManagementComponent implements OnInit {
     this.showAddUserModal = true;
     this.newUsername = '';
     this.newEmail = '';
+    this.newPassword = '';
     this.newRole = UserRole.CUSTOMER;
     this.formError = '';
     this.formSuccess = '';
@@ -102,9 +136,68 @@ export class UserManagementComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
+  openBulkModal(): void {
+    this.showBulkModal = true;
+    this.selectedFile = null;
+    this.bulkResult = null;
+    this.bulkError = '';
+    this.cdr.detectChanges();
+  }
+
+  closeBulkModal(): void {
+    this.showBulkModal = false;
+    this.selectedFile = null;
+    this.cdr.detectChanges();
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.selectedFile = input.files[0];
+      this.bulkError = '';
+    }
+  }
+
+  uploadCsv(): void {
+    if (!this.selectedFile) {
+      this.bulkError = 'Please choose a CSV file to upload.';
+      return;
+    }
+
+    this.isBulkUploading = true;
+    this.bulkError = '';
+    this.bulkResult = null;
+
+    this.userService.bulkUploadUsers(this.selectedFile).subscribe({
+      next: (res) => {
+        this.isBulkUploading = false;
+        this.bulkResult = res;
+        this.toast.success(`Bulk upload complete: ${res.successCount} created, ${res.failureCount} failed.`);
+        this.loadUsers();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isBulkUploading = false;
+        this.bulkError = err.error?.message || err.error || 'Bulk upload failed.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  downloadSampleCsv(): void {
+    const csvContent = 'username,email,password,role\n' +
+      'priya_agent,priya@tixmanager.com,,SUPPORT_AGENT\n' +
+      'alex_dev,alex@example.com,,CUSTOMER\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'sample_users.csv';
+    link.click();
+  }
+
   addUser(): void {
     if (!this.newUsername.trim() || !this.newEmail.trim()) {
-      this.formError = 'Please fill in all fields.';
+      this.formError = 'Please fill in all required fields.';
       this.formSuccess = '';
       return;
     }
@@ -117,17 +210,18 @@ export class UserManagementComponent implements OnInit {
     const payload = {
       username: this.newUsername.trim(),
       email: this.newEmail.trim(),
-      password: 'password123',
+      password: this.newPassword.trim() || undefined,
       role: this.newRole,
     };
 
-    this.authService.register(payload).subscribe({
+    this.userService.createUser(payload).subscribe({
       next: (created) => {
         this.formError = '';
         this.formSuccess = `User "${created.username}" created successfully.`;
-        this.toast.success(`User "${created.username}" created with default password "password123".`);
+        this.toast.success(`User "${created.username}" created.`);
         this.newUsername = '';
         this.newEmail = '';
+        this.newPassword = '';
         this.newRole = UserRole.CUSTOMER;
         this.loadUsers();
         this.cdr.detectChanges();
@@ -143,31 +237,60 @@ export class UserManagementComponent implements OnInit {
 
   changeRole(userId: number, newRole: UserRole): void {
     const user = this.users.find(u => u.id === userId);
-    if (user) {
-      user.role = newRole;
-      this.toast.info(`User role set to ${newRole}.`);
-      this.applyFilters();
+    if (!user) return;
+
+    if (!this.canModifyUser(user)) {
+      this.toast.error('Insufficient permissions to modify this user.');
+      return;
     }
+
+    this.userService.updateProfile(userId, { role: newRole }).subscribe({
+      next: () => {
+        user.role = newRole;
+        this.toast.success(`User role updated to ${this.getRoleLabel(newRole)}.`);
+        this.applyFilters();
+      },
+      error: (err) => {
+        this.toast.error(err.error?.message || 'Failed to update user role.');
+        this.loadUsers();
+      }
+    });
   }
 
   toggleStatus(userId: number): void {
+    const user = this.users.find(u => u.id === userId);
+    if (user && !this.canModifyUser(user)) {
+      this.toast.error('Cannot modify this user account.');
+      return;
+    }
+
     this.userService.softDeleteUser(userId).subscribe({
       next: () => {
         this.toast.success(`User #${userId} status updated.`);
         this.loadUsers();
       },
-      error: () => {
-        this.toast.error(`Failed to update status for user #${userId}.`);
+      error: (err) => {
+        this.toast.error(err.error?.message || `Failed to update status for user #${userId}.`);
       }
     });
   }
 
   getRoleLabel(role: UserRole): string {
-    return { CUSTOMER: 'Customer', SUPPORT_AGENT: 'Support Agent', ADMIN: 'Admin' }[role] ?? role;
+    return {
+      CUSTOMER: 'Customer',
+      SUPPORT_AGENT: 'Support Agent',
+      ADMIN: 'Admin',
+      SYSTEM_ADMIN: 'System Admin'
+    }[role] ?? role;
   }
 
   getRoleClass(role: UserRole): string {
-    return { CUSTOMER: 'role-customer', SUPPORT_AGENT: 'role-agent', ADMIN: 'role-admin' }[role] ?? '';
+    return {
+      CUSTOMER: 'role-customer',
+      SUPPORT_AGENT: 'role-agent',
+      ADMIN: 'role-admin',
+      SYSTEM_ADMIN: 'role-sysadmin'
+    }[role] ?? '';
   }
 
   formatDate(dateStr?: string): string {
@@ -175,4 +298,3 @@ export class UserManagementComponent implements OnInit {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 }
-

@@ -31,7 +31,15 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
 
-        // 1. Create Admin
+        // 1. Create System Admin
+        User sysAdmin = new User();
+        sysAdmin.setUsername("sysadmin");
+        sysAdmin.setPassword(passwordEncoder.encode("sysadmin123"));
+        sysAdmin.setEmail("sysadmin@tixmanager.com");
+        sysAdmin.setRole(UserRole.SYSTEM_ADMIN);
+        userRepository.save(sysAdmin);
+
+        // 2. Create Admin
         User admin = new User();
         admin.setUsername("admin");
         admin.setPassword(passwordEncoder.encode("admin123"));

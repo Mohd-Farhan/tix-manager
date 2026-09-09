@@ -1,5 +1,7 @@
 package com.support.service;
 
+import com.support.dto.BulkUploadResultDTO;
+import com.support.dto.CreateUserRequest;
 import com.support.dto.PasswordChangeDTO;
 import com.support.dto.UserDTO;
 import com.support.entity.User;
@@ -16,8 +18,15 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * ==============================================================================================
@@ -42,6 +51,152 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Transactional
+    public UserDTO createUser(CreateUserRequest request, String currentUsername) {
+        User caller = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UsernameNotFoundException(currentUsername));
+
+        // Enforce role hierarchy: ADMIN cannot create ADMIN or SYSTEM_ADMIN
+        if (caller.getRole() == UserRole.ADMIN &&
+                (request.getRole() == UserRole.ADMIN || request.getRole() == UserRole.SYSTEM_ADMIN)) {
+            throw new InvalidOperationException("Admins cannot create Admin or System Admin accounts.");
+        }
+
+        String username = request.getUsername().trim();
+        String email = request.getEmail().trim();
+
+        if (userRepository.findByUsername(username).isPresent()) {
+            throw new DuplicateResourceException("User", "username", username);
+        }
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new DuplicateResourceException("User", "email", email);
+        }
+
+        String rawPassword = (request.getPassword() != null && !request.getPassword().trim().isEmpty())
+                ? request.getPassword().trim()
+                : username + "@123";
+
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setRole(request.getRole());
+
+        userRepository.save(user);
+        return userMapper.toDTO(user);
+    }
+
+    @Transactional
+    public BulkUploadResultDTO bulkUploadUsersCsv(MultipartFile file, String currentUsername) {
+        User caller = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UsernameNotFoundException(currentUsername));
+
+        if (file == null || file.isEmpty()) {
+            throw new InvalidOperationException("Uploaded file is empty.");
+        }
+
+        int totalRows = 0;
+        int successCount = 0;
+        int failureCount = 0;
+        List<String> errors = new ArrayList<>();
+        Set<String> batchUsernames = new HashSet<>();
+        Set<String> batchEmails = new HashSet<>();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            int lineNumber = 0;
+
+            while ((line = reader.readLine()) != null) {
+                lineNumber++;
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+
+                // Check header row
+                if (lineNumber == 1 && trimmed.toLowerCase().startsWith("username")) {
+                    continue;
+                }
+
+                totalRows++;
+                String[] tokens = trimmed.split(",", -1);
+                if (tokens.length < 3) {
+                    failureCount++;
+                    errors.add(String.format("Row %d: Invalid column count. Expected format: username,email,password,role", lineNumber));
+                    continue;
+                }
+
+                String username = tokens[0].trim();
+                String email = tokens[1].trim();
+                String password = tokens.length > 2 ? tokens[2].trim() : "";
+                String roleStr = tokens.length > 3 ? tokens[3].trim() : "CUSTOMER";
+
+                if (username.length() < 3) {
+                    failureCount++;
+                    errors.add(String.format("Row %d: Username must be at least 3 characters.", lineNumber));
+                    continue;
+                }
+
+                if (!email.contains("@")) {
+                    failureCount++;
+                    errors.add(String.format("Row %d (%s): Invalid email format '%s'.", lineNumber, username, email));
+                    continue;
+                }
+
+                UserRole role;
+                try {
+                    role = UserRole.valueOf(roleStr.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    failureCount++;
+                    errors.add(String.format("Row %d (%s): Invalid role '%s'.", lineNumber, username, roleStr));
+                    continue;
+                }
+
+                // Enforce role hierarchy: ADMIN cannot create ADMIN or SYSTEM_ADMIN
+                if (caller.getRole() == UserRole.ADMIN && (role == UserRole.ADMIN || role == UserRole.SYSTEM_ADMIN)) {
+                    failureCount++;
+                    errors.add(String.format("Row %d (%s): Admins cannot create %s accounts.", lineNumber, username, role));
+                    continue;
+                }
+
+                // Check database & intra-batch uniqueness
+                if (userRepository.findByUsername(username).isPresent() || batchUsernames.contains(username.toLowerCase())) {
+                    failureCount++;
+                    errors.add(String.format("Row %d: Username '%s' already exists.", lineNumber, username));
+                    continue;
+                }
+
+                if (userRepository.findByEmail(email).isPresent() || batchEmails.contains(email.toLowerCase())) {
+                    failureCount++;
+                    errors.add(String.format("Row %d: Email '%s' already exists.", lineNumber, email));
+                    continue;
+                }
+
+                String effectivePassword = password.isEmpty() ? username + "@123" : password;
+
+                User newUser = new User();
+                newUser.setUsername(username);
+                newUser.setEmail(email);
+                newUser.setPassword(passwordEncoder.encode(effectivePassword));
+                newUser.setRole(role);
+
+                userRepository.save(newUser);
+                batchUsernames.add(username.toLowerCase());
+                batchEmails.add(email.toLowerCase());
+                successCount++;
+            }
+        } catch (Exception e) {
+            throw new InvalidOperationException("Failed to parse CSV file: " + e.getMessage());
+        }
+
+        return BulkUploadResultDTO.builder()
+                .totalRows(totalRows)
+                .successCount(successCount)
+                .failureCount(failureCount)
+                .errors(errors)
+                .build();
+    }
 
     @Transactional
     public UserDTO registerUser(UserDTO dto) {
@@ -103,12 +258,31 @@ public class UserService {
 
     @Transactional
     public void softDeleteUser(Long userId) {
-        User user = userRepository.findById(userId)
+        softDeleteUser(userId, null);
+    }
+
+    @Transactional
+    public void softDeleteUser(Long userId, String currentUsername) {
+        User target = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        user.setDeleted(true);
-        userRepository.save(user);
+        if (currentUsername != null) {
+            User caller = userRepository.findByUsername(currentUsername)
+                    .orElseThrow(() -> new UsernameNotFoundException(currentUsername));
+
+            if (caller.getId().equals(target.getId())) {
+                throw new InvalidOperationException("You cannot deactivate your own account.");
+            }
+
+            if (caller.getRole() == UserRole.ADMIN && (target.getRole() == UserRole.ADMIN || target.getRole() == UserRole.SYSTEM_ADMIN)) {
+                throw new InvalidOperationException("Admins cannot deactivate Admin or System Admin accounts.");
+            }
+        }
+
+        target.setDeleted(true);
+        userRepository.save(target);
     }
+
 
     public List<UserDTO> getUsersByRole(UserRole role) {
         List<User> users = userRepository.findByRole(role);

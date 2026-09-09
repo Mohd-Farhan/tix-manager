@@ -55,9 +55,6 @@ class AuthControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private UserService userService;
-
-    @MockBean
     private AuthenticationManager authenticationManager;
 
     @MockBean
@@ -66,55 +63,6 @@ class AuthControllerTest {
     @MockBean
     private UserMapper userMapper;
 
-    /**
-     * TEST CASE 1: Register endpoint with valid payload returns 201 Created.
-     */
-    @Test
-    @DisplayName("POST /api/auth/register — Successfully register user and return 201 CREATED")
-    void testRegisterUser_Success() throws Exception {
-        UserDTO inputDto = UserDTO.builder()
-                .username("new_customer")
-                .email("customer@example.com")
-                .password("Password123")
-                .role(UserRole.CUSTOMER)
-                .build();
-
-        UserDTO createdDto = UserDTO.builder()
-                .id(10L)
-                .username("new_customer")
-                .email("customer@example.com")
-                .role(UserRole.CUSTOMER)
-                .build();
-
-        when(userService.registerUser(any(UserDTO.class))).thenReturn(createdDto);
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inputDto)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(10))
-                .andExpect(jsonPath("$.username").value("new_customer"))
-                .andExpect(jsonPath("$.email").value("customer@example.com"));
-    }
-
-    /**
-     * TEST CASE 2: Register endpoint with invalid input returns 400 Bad Request.
-     */
-    @Test
-    @DisplayName("POST /api/auth/register — Return 400 BAD REQUEST when username/email validation fails")
-    void testRegisterUser_ValidationFailure() throws Exception {
-        UserDTO invalidDto = UserDTO.builder()
-                .username("ab") // min size is 3
-                .email("invalid-email-address")
-                .password("")
-                .build();
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidDto)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Validation Failed"));
-    }
 
     /**
      * TEST CASE 3: Successful Login returns 200 OK and JWT Token.

@@ -3,6 +3,8 @@ package com.support.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -31,13 +33,21 @@ public class SecurityConfig {
     private UserDetailsService userDetailsService;
 
     @Bean
+    public RoleHierarchy roleHierarchy() {
+        return RoleHierarchyImpl.withDefaultRolePrefix()
+                .role("SYSTEM_ADMIN").implies("ADMIN")
+                .role("ADMIN").implies("SUPPORT_AGENT")
+                .role("SUPPORT_AGENT").implies("CUSTOMER")
+                .build();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorise -> authorise
                         .requestMatchers(
-                                "/api/auth/register",
                                 "/api/auth/login",
                                 "/h2-console/**",
                                 "/actuator/**",

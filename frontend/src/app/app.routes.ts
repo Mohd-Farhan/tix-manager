@@ -15,10 +15,8 @@ export const routes: Routes = [
   },
   {
     path: 'auth/register',
-    loadComponent: () =>
-      import('./pages/auth/register/register.component').then(
-        (m) => m.RegisterComponent
-      ),
+    redirectTo: 'auth/login',
+    pathMatch: 'full',
   },
   {
     path: 'customer',
@@ -44,7 +42,7 @@ export const routes: Routes = [
   },
   {
     path: 'admin',
-    canActivate: [roleGuard([UserRole.ADMIN])],
+    canActivate: [roleGuard([UserRole.ADMIN, UserRole.SYSTEM_ADMIN])],
     loadComponent: () => import('./layouts/admin-layout/admin-layout.component').then((m) => m.AdminLayoutComponent),
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

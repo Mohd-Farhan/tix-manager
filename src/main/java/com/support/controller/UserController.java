@@ -1,5 +1,7 @@
 package com.support.controller;
 
+import com.support.dto.BulkUploadResultDTO;
+import com.support.dto.CreateUserRequest;
 import com.support.dto.PasswordChangeDTO;
 import com.support.dto.UserDTO;
 import com.support.entity.UserRole;
@@ -10,9 +12,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -30,6 +36,38 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Operation(summary = "Create a new user account", description = "Administrative creation of user accounts. Admins can create Agent/Customer; System Admin can create any role.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "User created successfully"),
+            @ApiResponse(responseCode = "400", description = "Validation failed on payload or hierarchy violation"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role"),
+            @ApiResponse(responseCode = "409", description = "Username or email already exists")
+    })
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserDTO> createUser(
+            @Valid @RequestBody CreateUserRequest request,
+            Authentication authentication) {
+        UserDTO user = userService.createUser(request, authentication.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(user);
+    }
+
+    @Operation(summary = "Bulk upload users via CSV", description = "Uploads a CSV file with columns: username,email,password,role. Enforces role hierarchy per row and returns a summary report.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Bulk upload processed, returns summary report"),
+            @ApiResponse(responseCode = "400", description = "File is empty or unreadable"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role")
+    })
+    @PostMapping(value = "/bulk-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BulkUploadResultDTO> bulkUploadUsers(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+        BulkUploadResultDTO result = userService.bulkUploadUsersCsv(file, authentication.getName());
+        return ResponseEntity.ok(result);
+    }
+
 
     @Operation(summary = "Get all support agents", description = "Fetches the list of active users with the SUPPORT_AGENT role for ticket assignment.")
     @ApiResponses({
@@ -87,16 +125,19 @@ public class UserController {
         return ResponseEntity.ok(updated);
     }
 
-    @Operation(summary = "Soft delete user", description = "Flags a user as deleted without dropping historical database records. Admin only.")
+    @Operation(summary = "Soft delete user", description = "Flags a user as deleted without dropping historical database records. Enforces role hierarchy.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "User soft deleted"),
-            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN role"),
+            @ApiResponse(responseCode = "400", description = "Cannot deactivate own account or hierarchy violation"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role"),
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> softDeleteUser(@PathVariable Long id) {
-        userService.softDeleteUser(id);
+    public ResponseEntity<Void> softDeleteUser(
+            @PathVariable Long id,
+            Authentication authentication) {
+        userService.softDeleteUser(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 

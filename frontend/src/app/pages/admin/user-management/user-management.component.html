@@ -4,10 +4,16 @@
       <h1 class="page-title">User Management</h1>
       <p class="page-subtitle">{{ filteredUsers.length }} users found</p>
     </div>
-    <button class="btn-primary add-btn" (click)="openAddUserModal()" id="admin-add-user-btn">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Add User
-    </button>
+    <div class="header-actions">
+      <button class="btn-secondary bulk-btn" (click)="openBulkModal()" id="admin-bulk-import-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Bulk Import CSV
+      </button>
+      <button class="btn-primary add-btn" (click)="openAddUserModal()" id="admin-add-user-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add User
+      </button>
+    </div>
   </div>
 
   <!-- Controls -->
@@ -19,6 +25,7 @@
         <option value="CUSTOMER">Customer</option>
         <option value="SUPPORT_AGENT">Support Agent</option>
         <option value="ADMIN">Admin</option>
+        <option value="SYSTEM_ADMIN">System Admin</option>
       </select>
       <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
     </div>
@@ -57,11 +64,15 @@
           <td class="col-email">{{ user.email }}</td>
           <td class="col-role">
             <div class="role-select-wrapper">
+              @if (canModifyUser(user)) {
               <select [ngModel]="user.role" (ngModelChange)="changeRole(user.id, $event)" class="role-select" [ngClass]="getRoleClass(user.role)">
-                <option value="CUSTOMER">Customer</option>
-                <option value="SUPPORT_AGENT">Support Agent</option>
-                <option value="ADMIN">Admin</option>
+                @for (opt of availableRolesForCreation; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+                }
               </select>
+              } @else {
+              <span class="role-badge-static" [ngClass]="getRoleClass(user.role)">{{ getRoleLabel(user.role) }}</span>
+              }
             </div>
           </td>
           <td class="col-created">{{ formatDate(user.createdAt || '') }}</td>
@@ -71,7 +82,9 @@
             </span>
           </td>
           <td class="col-actions">
-            <button class="btn-toggle-status" (click)="toggleStatus(user.id)" [title]="user.status === 'active' ? 'Deactivate user' : 'Activate user'">
+            <button class="btn-toggle-status" (click)="toggleStatus(user.id)"
+              [disabled]="!canModifyUser(user)"
+              [title]="!canModifyUser(user) ? 'Cannot modify this account (privilege boundary or self)' : (user.status === 'active' ? 'Deactivate user' : 'Activate user')">
               @if (user.status === 'active') {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
               } @else {
@@ -86,6 +99,7 @@
     }
   </div>
 
+  <!-- Add User Modal -->
   <app-modal-shell
     [visible]="showAddUserModal"
     title="Add New User"
@@ -104,18 +118,23 @@
     </div>
     }
     <div class="input-field-group">
-      <label class="input-label" for="new-user-name">Full Name</label>
-      <input type="text" id="new-user-name" class="text-input" [(ngModel)]="newUsername" placeholder="Enter full name" />
+      <label class="input-label" for="new-user-name">Username</label>
+      <input type="text" id="new-user-name" class="text-input" [(ngModel)]="newUsername" placeholder="e.g. john_doe" />
     </div>
     <div class="input-field-group">
       <label class="input-label" for="new-user-email">Email Address</label>
-      <input type="email" id="new-user-email" class="text-input" [(ngModel)]="newEmail" placeholder="Enter email address" />
+      <input type="email" id="new-user-email" class="text-input" [(ngModel)]="newEmail" placeholder="e.g. john@example.com" />
+    </div>
+    <div class="input-field-group">
+      <label class="input-label" for="new-user-password">Initial Password (Optional)</label>
+      <input type="password" id="new-user-password" class="text-input" [(ngModel)]="newPassword" placeholder="Defaults to <username>@123 if blank" />
+      <span class="field-hint">Leave blank to automatically assign default password</span>
     </div>
     <div class="input-field-group">
       <label class="input-label" for="new-user-role">Role</label>
       <div class="select-wrapper full-width">
         <select id="new-user-role" class="filter-select" [(ngModel)]="newRole">
-          @for (role of roles; track role.value) {
+          @for (role of availableRolesForCreation; track role.value) {
           <option [value]="role.value">{{ role.label }}</option>
           }
         </select>
@@ -125,6 +144,70 @@
     <div class="modal-form-actions">
       <button class="btn-secondary" (click)="closeAddUserModal()">Cancel</button>
       <button class="btn-primary" (click)="addUser()" id="admin-add-user-submit">Create User</button>
+    </div>
+  </app-modal-shell>
+
+  <!-- Bulk Import CSV Modal -->
+  <app-modal-shell
+    [visible]="showBulkModal"
+    title="Bulk Import Users (CSV)"
+    icon='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+    (closed)="closeBulkModal()">
+    
+    <div class="bulk-instructions">
+      <p class="instruction-text">Upload a standard CSV file with the following column structure:</p>
+      <code class="format-code">username,email,password,role</code>
+      <p class="field-hint">Note: If password is empty, default <code>&lt;username&gt;@123</code> is assigned. Admins cannot create Admin/System Admin accounts.</p>
+      <button class="btn-sample-download" (click)="downloadSampleCsv()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Sample CSV
+      </button>
+    </div>
+
+    @if (bulkError) {
+    <div class="alert-message alert-error">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>{{ bulkError }}</span>
+    </div>
+    }
+
+    <div class="file-upload-box">
+      <input type="file" accept=".csv,text/csv" id="csv-file-input" (change)="onFileSelected($event)" class="file-input" />
+      <label for="csv-file-input" class="file-label">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <span>{{ selectedFile ? selectedFile.name : 'Choose a .CSV file or drag & drop here' }}</span>
+      </label>
+    </div>
+
+    @if (bulkResult) {
+    <div class="bulk-result-card">
+      <div class="result-stats">
+        <div class="stat-badge total">Total: {{ bulkResult.totalRows }}</div>
+        <div class="stat-badge success">Created: {{ bulkResult.successCount }}</div>
+        <div class="stat-badge failure">Failed: {{ bulkResult.failureCount }}</div>
+      </div>
+      @if (bulkResult.errors.length > 0) {
+      <div class="result-errors">
+        <span class="errors-header">Row Errors:</span>
+        <ul class="error-list">
+          @for (err of bulkResult.errors; track err) {
+          <li>{{ err }}</li>
+          }
+        </ul>
+      </div>
+      }
+    </div>
+    }
+
+    <div class="modal-form-actions">
+      <button class="btn-secondary" (click)="closeBulkModal()">Close</button>
+      <button class="btn-primary" (click)="uploadCsv()" [disabled]="!selectedFile || isBulkUploading">
+        @if (isBulkUploading) {
+        <span>Uploading...</span>
+        } @else {
+        <span>Import Users</span>
+        }
+      </button>
     </div>
   </app-modal-shell>
 </div>

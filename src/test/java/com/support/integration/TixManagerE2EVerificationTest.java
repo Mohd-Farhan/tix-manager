@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.support.dto.CreateMessageRequest;
 import com.support.dto.CreateTicketRequest;
+import com.support.dto.CreateUserRequest;
 import com.support.dto.LoginDTO;
 import com.support.dto.TicketResponse;
 import com.support.dto.UserDTO;
@@ -45,21 +46,36 @@ public class TixManagerE2EVerificationTest {
     void testCompleteTicketLifecycle_E2E() throws Exception {
 
         // --------------------------------------------------------------------------------------
-        // STEP 1: Register New Customer Account
+        // STEP 1: Admin Provisions New Customer Account via POST /api/users
         // --------------------------------------------------------------------------------------
-        UserDTO customerRegistration = UserDTO.builder()
+        LoginDTO adminLogin = new LoginDTO();
+        adminLogin.setUsername("admin");
+        adminLogin.setPassword("admin123");
+
+        MvcResult adminLoginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(adminLogin)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String adminJwt = objectMapper.readTree(adminLoginResult.getResponse().getContentAsString())
+                .get("token").asText();
+
+        CreateUserRequest customerCreation = CreateUserRequest.builder()
                 .username("e2e_customer")
                 .email("e2e_customer@test.com")
                 .password("Password123")
                 .role(UserRole.CUSTOMER)
                 .build();
 
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/users")
+                        .header("Authorization", "Bearer " + adminJwt)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(customerRegistration)))
+                        .content(objectMapper.writeValueAsString(customerCreation)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("e2e_customer"))
                 .andExpect(jsonPath("$.email").value("e2e_customer@test.com"));
+
 
         // --------------------------------------------------------------------------------------
         // STEP 2: Customer Logs In & Obtains JWT Bearer Token

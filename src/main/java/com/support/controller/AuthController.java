@@ -6,14 +6,12 @@ import com.support.dto.UserDTO;
 import com.support.mapper.UserMapper;
 import com.support.security.JwtService;
 import com.support.security.UserDetailsImpl;
-import com.support.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,15 +23,12 @@ import org.springframework.web.bind.annotation.*;
  * REST CONTROLLER: AuthController
  * ==============================================================================================
  * 
- * Manages user registration and JWT authentication token issuance.
+ * Manages JWT authentication token issuance.
  */
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Authentication", description = "Endpoints for user registration and JWT login")
+@Tag(name = "Authentication", description = "Endpoints for JWT login")
 public class AuthController {
-
-    @Autowired
-    private UserService userService;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -44,17 +39,6 @@ public class AuthController {
     @Autowired
     private UserMapper userMapper;
 
-    @Operation(summary = "Register a new user account", description = "Creates a new user profile with encrypted password and returns the created user entity.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "User registered successfully"),
-            @ApiResponse(responseCode = "400", description = "Validation failed on payload"),
-            @ApiResponse(responseCode = "409", description = "Username or email already exists")
-    })
-    @PostMapping("/register")
-    public ResponseEntity<UserDTO> registerUser(@Valid @RequestBody UserDTO userDto) {
-        UserDTO createdUser = userService.registerUser(userDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
-    }
 
     @Operation(summary = "Authenticate user credentials", description = "Validates username and password, then returns a signed stateless JWT token with user details.")
     @ApiResponses({
