@@ -21,9 +21,10 @@ import lombok.*;
     @Index(name = "idx_message_ticket_id", columnList = "ticket_id")
 })
 @Data
+@EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-public class Message {
+public class Message extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,12 +41,4 @@ public class Message {
     @Column(nullable = false, columnDefinition = "TEXT")
     @NotBlank
     private String content;
-
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }

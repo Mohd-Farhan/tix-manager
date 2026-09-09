@@ -64,6 +64,8 @@ public interface TicketMapper {
     @Mapping(target = "assignedAgent", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "statusHistory", ignore = true)
     Ticket toEntity(CreateTicketRequest request);
@@ -79,6 +81,8 @@ public interface TicketMapper {
     @Mapping(target = "assignedAgent", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "statusHistory", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)

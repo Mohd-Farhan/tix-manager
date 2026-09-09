@@ -59,6 +59,12 @@ public class TicketResponse {
     @Schema(description = "Timestamp when ticket was last updated")
     private LocalDateTime updatedAt;
 
+    @Schema(description = "Username who created the ticket", example = "farhan_dev")
+    private String createdBy;
+
+    @Schema(description = "Username who last modified the ticket", example = "priya_agent")
+    private String lastModifiedBy;
+
     @Schema(description = "Soft delete status flag")
     private boolean deleted;
 

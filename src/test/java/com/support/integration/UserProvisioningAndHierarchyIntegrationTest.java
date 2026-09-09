@@ -217,4 +217,26 @@ public class UserProvisioningAndHierarchyIntegrationTest {
         String agentToken = loginAndGetToken("bulk_agent_1", "AgentPass@123");
         assertThat(agentToken).isNotBlank();
     }
+
+    @Test
+    @DisplayName("Scenario 4: JPA Auditing automatically populates createdBy and createdAt via SecurityContext")
+    void testJpaAuditing_PopulatesCreatedByAndCreatedAtAutomatically() throws Exception {
+        String adminToken = loginAndGetToken("admin", "admin123");
+
+        CreateUserRequest auditedUser = CreateUserRequest.builder()
+                .username("audited_customer")
+                .email("audited@example.com")
+                .password("Audited@123")
+                .role(UserRole.CUSTOMER)
+                .build();
+
+        mockMvc.perform(post("/api/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(auditedUser)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.username").value("audited_customer"))
+                .andExpect(jsonPath("$.createdBy").value("admin"))
+                .andExpect(jsonPath("$.createdAt").isNotEmpty());
+    }
 }

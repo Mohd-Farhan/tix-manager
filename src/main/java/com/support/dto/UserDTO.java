@@ -33,5 +33,11 @@ public class UserDTO {
 
     private boolean deleted;
 
+    private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
+
+    private String createdBy;
+
+    private String lastModifiedBy;
 }

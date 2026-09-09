@@ -39,10 +39,11 @@ import lombok.*;
     @Index(name = "idx_ticket_status", columnList = "status")
 })
 @Data
+@EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
 @SQLRestriction("deleted = false")
-public class Ticket {
+public class Ticket extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -80,28 +81,9 @@ public class Ticket {
     @JoinColumn(name = "agent_id")
     private User assignedAgent;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
-
     @Column(nullable = false)
     private boolean deleted = false;
 
     @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<TicketStatusHistory> statusHistory = new ArrayList<>();
-
-    @PrePersist
-    protected void onCreate() {
-        if (status == null)
-            status = TicketStatus.OPEN;
-        if (priority == null)
-            priority = TicketPriority.MEDIUM;
-        createdAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

@@ -21,10 +21,11 @@ import lombok.*;
 @Entity
 @Table(name = "users")
 @Data
+@EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
 @SQLRestriction("deleted = false")
-public class User {
+public class User extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,23 +49,6 @@ public class User {
     @Column(nullable = false)
     private UserRole role = UserRole.CUSTOMER;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
-
     @Column(nullable = false)
     private boolean deleted = false;
-
-    @PrePersist
-    protected void onCreate() {
-        if (role == null)
-            role = UserRole.CUSTOMER;
-        createdAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }
