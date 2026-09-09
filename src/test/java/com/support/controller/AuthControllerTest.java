@@ -9,7 +9,6 @@ import com.support.entity.UserRole;
 import com.support.mapper.UserMapper;
 import com.support.security.JwtService;
 import com.support.security.UserDetailsImpl;
-import com.support.service.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

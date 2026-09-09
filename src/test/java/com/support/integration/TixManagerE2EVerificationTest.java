@@ -7,7 +7,6 @@ import com.support.dto.CreateTicketRequest;
 import com.support.dto.CreateUserRequest;
 import com.support.dto.LoginDTO;
 import com.support.dto.TicketResponse;
-import com.support.dto.UserDTO;
 import com.support.entity.TicketPriority;
 import com.support.entity.UserRole;
 import org.junit.jupiter.api.DisplayName;

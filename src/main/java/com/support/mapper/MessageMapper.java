@@ -46,5 +46,8 @@ public interface MessageMapper {
     @Mapping(target = "ticket", ignore = true)
     @Mapping(target = "sender", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
     Message toEntity(CreateMessageRequest request);
 }

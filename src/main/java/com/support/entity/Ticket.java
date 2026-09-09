@@ -1,6 +1,5 @@
 package com.support.entity;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,25 +17,31 @@ import lombok.*;
  * WHY THIS DATABASE & CONCURRENCY DESIGN (Enterprise Standard):
  * 
  * 1. Optimistic Locking (@Version):
- *    - Prevents "lost updates" and race conditions when multiple support agents or customers
- *      attempt to update/assign the same ticket simultaneously.
- *    - Hibernate verifies the version column during UPDATE SQL. If another transaction changed
- *      the row first, an OptimisticLockException is thrown and caught by GlobalExceptionHandler.
+ * - Prevents "lost updates" and race conditions when multiple support agents or
+ * customers
+ * attempt to update/assign the same ticket simultaneously.
+ * - Hibernate verifies the version column during UPDATE SQL. If another
+ * transaction changed
+ * the row first, an OptimisticLockException is thrown and caught by
+ * GlobalExceptionHandler.
  * 
  * 2. Targeted Database Indexing:
- *    - `idx_ticket_customer`: Accelerates customer portal lookups (WHERE customer_id = ?).
- *    - `idx_ticket_agent`: Accelerates agent queue lookups (WHERE agent_id = ?).
- *    - `idx_ticket_status`: Accelerates active queue filtering (WHERE status = ?).
- *    - Low-cardinality columns (deleted, priority) are deliberately not indexed to avoid write overhead.
+ * - `idx_ticket_customer`: Accelerates customer portal lookups (WHERE
+ * customer_id = ?).
+ * - `idx_ticket_agent`: Accelerates agent queue lookups (WHERE agent_id = ?).
+ * - `idx_ticket_status`: Accelerates active queue filtering (WHERE status = ?).
+ * - Low-cardinality columns (deleted, priority) are deliberately not indexed to
+ * avoid write overhead.
  * 
  * 3. Soft Deletion & Audit Trail:
- *    - `@SQLRestriction("deleted = false")` guarantees transparent exclusion of soft-deleted rows.
+ * - `@SQLRestriction("deleted = false")` guarantees transparent exclusion of
+ * soft-deleted rows.
  */
 @Entity
 @Table(name = "tickets", indexes = {
-    @Index(name = "idx_ticket_customer", columnList = "customer_id"),
-    @Index(name = "idx_ticket_agent", columnList = "agent_id"),
-    @Index(name = "idx_ticket_status", columnList = "status")
+        @Index(name = "idx_ticket_customer", columnList = "customer_id"),
+        @Index(name = "idx_ticket_agent", columnList = "agent_id"),
+        @Index(name = "idx_ticket_status", columnList = "status")
 })
 @Data
 @EqualsAndHashCode(callSuper = false)

@@ -1,7 +1,5 @@
 package com.support.entity;
 
-import java.time.LocalDateTime;
-
 import org.hibernate.annotations.SQLRestriction;
 
 import jakarta.persistence.*;
@@ -14,9 +12,11 @@ import lombok.*;
  * ==============================================================================================
  * 
  * WHY THIS DATABASE DESIGN:
- * - Unique columns `username` and `email` have `@Column(unique = true)`, which automatically creates
- *   unique B-Tree indexes at the database level.
- * - Redundant table-level index annotations were removed to avoid duplicate index maintenance overhead.
+ * - Unique columns `username` and `email` have `@Column(unique = true)`, which
+ * automatically creates
+ * unique B-Tree indexes at the database level.
+ * - Redundant table-level index annotations were removed to avoid duplicate
+ * index maintenance overhead.
  */
 @Entity
 @Table(name = "users")
