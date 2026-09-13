@@ -1,7 +1,25 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef, NgZone, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef, NgZone, inject, HostBinding } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
+
+export interface FloatingWaterIcon {
+  src: string;
+  alt: string;
+  top: string;
+  left?: string;
+  right?: string;
+  size: 'sm' | 'md' | 'lg';
+  animClass: string;
+  delay: string;
+}
+
+export interface FeatureItem {
+  icon: SafeHtml;
+  title: string;
+  description: string;
+}
 
 @Component({
   selector: 'app-landing',
@@ -11,8 +29,13 @@ import { LogoComponent } from '../../shared/components/logo/logo.component';
   styleUrl: './landing.component.css',
 })
 export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
+  @HostBinding('class.dark-theme') get isDarkTheme(): boolean {
+    return this.isDark;
+  }
+
   private router = inject(Router);
   private ngZone = inject(NgZone);
+  private sanitizer = inject(DomSanitizer);
 
   @ViewChild('waterCanvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('heroSection', { static: true }) heroRef!: ElementRef<HTMLElement>;
@@ -32,46 +55,160 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   isDark = false;
   currentYear = new Date().getFullYear();
 
-  /* Animated hero stats */
-  stats = [
-    { value: '99.9%', label: 'Uptime SLA' },
-    { value: '< 2min', label: 'Avg Response' },
-    { value: '50K+', label: 'Tickets Resolved' },
-    { value: '4.9★', label: 'Customer Rating' },
+  /* Floating icons in water */
+  floatingIcons: FloatingWaterIcon[] = [
+    {
+      src: '/icons/customer-support.svg',
+      alt: 'Customer Support',
+      top: '12%',
+      left: '6%',
+      size: 'lg',
+      animClass: 'float-1',
+      delay: '0s',
+    },
+    {
+      src: '/icons/ai-triage.svg',
+      alt: 'AI Triage',
+      top: '16%',
+      right: '7%',
+      size: 'lg',
+      animClass: 'float-2',
+      delay: '1.2s',
+    },
+    {
+      src: '/icons/agent-workspace.svg',
+      alt: 'Agent Workspace',
+      top: '44%',
+      left: '4%',
+      size: 'md',
+      animClass: 'float-3',
+      delay: '2.5s',
+    },
+    {
+      src: '/icons/live-analytics.svg',
+      alt: 'Live Analytics',
+      top: '42%',
+      right: '5%',
+      size: 'lg',
+      animClass: 'float-4',
+      delay: '0.8s',
+    },
+    {
+      src: '/icons/enterprise-security.svg',
+      alt: 'Enterprise Security',
+      top: '74%',
+      left: '7%',
+      size: 'md',
+      animClass: 'float-5',
+      delay: '1.8s',
+    },
+    {
+      src: '/icons/smart-auto-responses.svg',
+      alt: 'Smart Responses',
+      top: '70%',
+      right: '9%',
+      size: 'lg',
+      animClass: 'float-6',
+      delay: '0.5s',
+    },
+    {
+      src: '/icons/ai-assistant.svg',
+      alt: 'AI Assistant',
+      top: '26%',
+      left: '18%',
+      size: 'sm',
+      animClass: 'float-7',
+      delay: '3.0s',
+    },
+    {
+      src: '/icons/project-management.svg',
+      alt: 'Project Management',
+      top: '24%',
+      right: '20%',
+      size: 'sm',
+      animClass: 'float-8',
+      delay: '1.6s',
+    },
+    {
+      src: '/icons/mobile-app.svg',
+      alt: 'Mobile & Omnichannel',
+      top: '84%',
+      left: '19%',
+      size: 'sm',
+      animClass: 'float-1',
+      delay: '2.2s',
+    },
+    {
+      src: '/icons/optimization.svg',
+      alt: 'Continuous Optimization',
+      top: '82%',
+      right: '22%',
+      size: 'sm',
+      animClass: 'float-3',
+      delay: '0.9s',
+    },
+    {
+      src: '/icons/email-support.svg',
+      alt: 'Email Support',
+      top: '36%',
+      left: '12%',
+      size: 'sm',
+      animClass: 'float-4',
+      delay: '1.4s',
+    },
+    {
+      src: '/icons/social-support.svg',
+      alt: 'Social Support',
+      top: '58%',
+      right: '16%',
+      size: 'sm',
+      animClass: 'float-2',
+      delay: '2.8s',
+    },
   ];
 
-  features = [
-    {
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4c0 2 1 3.5 4 5.5C15 9.5 16 8 16 6a4 4 0 0 0-4-4Z"/><path d="M12 11.5c-3 2-4 3.5-4 5.5a4 4 0 0 0 8 0c0-2-1-3.5-4-5.5Z"/><line x1="12" y1="2" x2="12" y2="22"/></svg>`,
-      title: 'AI-Powered Triage',
-      description: 'Gemini AI automatically classifies, prioritizes, and routes every incoming ticket — so your team focuses on what matters.',
-    },
-    {
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg>`,
-      title: 'Smart Auto-Responses',
-      description: 'Retrieval-augmented generation searches your knowledge base and drafts instant, accurate replies for common inquiries.',
-    },
-    {
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`,
-      title: 'Agent Workspace',
-      description: 'A unified dashboard with ticket queues, real-time chat, AI-summarized threads, and suggested replies — all in one place.',
-    },
-    {
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
-      title: 'Live Analytics',
-      description: 'Track SLA compliance, agent performance, sentiment trends, and resolution metrics with beautifully crafted dashboards.',
-    },
-    {
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg>`,
-      title: 'Enterprise Security',
-      description: 'JWT authentication, role-based access control, and audit logging keep your support operations locked down.',
-    },
-    {
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6"/><path d="M12 17v6"/><path d="M5.6 5.6l4.25 4.25"/><path d="M14.15 14.15l4.25 4.25"/><path d="M1 12h6"/><path d="M17 12h6"/><path d="M5.6 18.4l4.25-4.25"/><path d="M14.15 9.85l4.25-4.25"/></svg>`,
-      title: 'Microservices Ready',
-      description: 'Architected to scale — seamlessly transition from monolith to distributed microservices with API Gateway & RabbitMQ.',
-    },
+  /* Animated hero stats */
+  stats = [
+    { value: '< 2 min', label: 'Avg First Response' },
+    { value: '85%', label: 'Faster Resolution' },
+    { value: '99.9%', label: 'Platform Reliability' },
+    { value: '4.9/5', label: 'Customer Satisfaction' },
   ];
+
+  get features(): FeatureItem[] {
+    return [
+      {
+        icon: this.sanitizer.bypassSecurityTrustHtml(`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`),
+        title: 'Intelligent Ticket Triage',
+        description: 'Automatically classifies, prioritizes, and routes incoming tickets to the right specialists so critical customer issues are handled first.',
+      },
+      {
+        icon: this.sanitizer.bypassSecurityTrustHtml(`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/><path d="M19 3v4"/><path d="M21 5h-4"/></svg>`),
+        title: 'AI Copilot & Smart Replies',
+        description: 'Generates instant conversation summaries, context-aware reply drafts, and recommended solutions to help agents resolve tickets in seconds.',
+      },
+      {
+        icon: this.sanitizer.bypassSecurityTrustHtml(`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`),
+        title: 'Self-Service Customer Portal',
+        description: 'Delivers a transparent, user-friendly portal where customers can submit tickets, track live progress, and message support directly.',
+      },
+      {
+        icon: this.sanitizer.bypassSecurityTrustHtml(`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`),
+        title: 'SLA Tracking & Timers',
+        description: 'Protects response and resolution commitments with active countdowns, automated escalation alerts, and breach prevention rules.',
+      },
+      {
+        icon: this.sanitizer.bypassSecurityTrustHtml(`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`),
+        title: 'Real-Time Insights & Reports',
+        description: 'Visualize team productivity, ticket velocity, peak support hours, and customer satisfaction metrics with actionable dashboards.',
+      },
+      {
+        icon: this.sanitizer.bypassSecurityTrustHtml(`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`),
+        title: 'Role-Based Collaboration',
+        description: 'Tailored workspaces for Customers, Support Agents, and Admins with internal notes, ticket reassignment, and status auditing.',
+      },
+    ];
+  }
 
   ngOnInit(): void {
     const savedTheme = localStorage.getItem('tix-theme');
@@ -87,6 +224,11 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private applyTheme(): void {
     document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
+    if (this.isDark) {
+      document.body.classList.add('dark-theme');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
   }
 
   ngAfterViewInit(): void {
@@ -120,19 +262,19 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
     const hero = this.heroRef?.nativeElement;
     if (!canvas || !hero) return;
 
-    const RIPPLE_INTENSITY = 2.25;
-    const RIPPLE_LIFETIME = 5.2;
-    const RIPPLE_SPEED = 0.55;
-    const POINTER_DISTANCE_THRESHOLD = 0.008;
-    const POINTER_INTERVAL = 0.055;
-    const MAX_WAVES = 14;
+    const RIPPLE_INTENSITY = 2.2;
+    const RIPPLE_LIFETIME = 2.6;
+    const RIPPLE_SPEED = 0.50;
+    const HOVER_WAVE_INTERVAL = 0.30;
+    const HOVER_DISTANCE_THRESHOLD = 50;
+    const MAX_WAVES = 24;
 
     const gl = canvas.getContext('webgl', {
       alpha: true,
       antialias: true,
       depth: false,
       stencil: false,
-      premultipliedAlpha: false,
+      premultipliedAlpha: true,
       preserveDrawingBuffer: false,
       powerPreference: 'high-performance'
     });
@@ -158,135 +300,102 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
       uniform vec2 uResolution;
       uniform float uTime;
       uniform vec3 uWaterColor;
+      uniform float uIsDark;
+      uniform vec2 uPointer;
+      uniform float uPointerActive;
       const int MAX_WAVES = ${MAX_WAVES};
       uniform vec4 uWaves[MAX_WAVES];
       uniform float uWaveCount;
-
-      float hash(vec2 p) {
-        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-      }
-
-      float noise(vec2 p) {
-        vec2 i = floor(p);
-        vec2 f = fract(p);
-        f = f * f * (3.0 - 2.0 * f);
-        float a = hash(i);
-        float b = hash(i + vec2(1.0, 0.0));
-        float c = hash(i + vec2(0.0, 1.0));
-        float d = hash(i + vec2(1.0, 1.0));
-        return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-      }
-
-      float baseWater(vec2 p) {
-        float h = 0.0;
-        h += sin(p.x * 2.8 + uTime * 0.16) * 0.005;
-        h += sin(p.y * 4.4 - uTime * 0.12) * 0.004;
-        h += sin(p.x * 12.0 + p.y * 5.0 + uTime * 0.18) * 0.0018;
-        h += sin(p.y * 15.0 - p.x * 4.0 - uTime * 0.14) * 0.0015;
-        h += (noise(p * 3.5 + vec2(uTime * 0.02, -uTime * 0.016)) - 0.5) * 0.004;
-        return h;
-      }
-
-      float singleWave(vec2 p, vec4 wave) {
-        if (wave.z < 0.0) return 0.0;
-        float age = uTime - wave.z;
-        if (age <= 0.0 || age > ${RIPPLE_LIFETIME.toFixed(2)}) return 0.0;
-        float radius = age * ${RIPPLE_SPEED.toFixed(3)};
-        float d = distance(p, wave.xy);
-        float front = d - radius;
-        float crest = exp(-front * front * 520.0);
-        float trough = exp(-(front + 0.018) * (front + 0.018) * 700.0) * 0.22;
-        float ageFade = 1.0 - smoothstep(0.0, ${RIPPLE_LIFETIME.toFixed(2)}, age);
-        ageFade = pow(ageFade, 1.15);
-        vec2 screenUV = vUv;
-        float nearestEdge = min(min(screenUV.x, 1.0 - screenUV.x), min(screenUV.y, 1.0 - screenUV.y));
-        float edgeFade = smoothstep(0.0, 0.06, nearestEdge);
-        return (crest - trough) * ageFade * edgeFade * wave.w;
-      }
-
-      float waterHeight(vec2 p) {
-        float height = baseWater(p);
-        for (int i = 0; i < MAX_WAVES; i++) {
-          if (float(i) >= uWaveCount) break;
-          height += singleWave(p, uWaves[i]) * 0.035;
-        }
-        return height;
-      }
-
-      vec3 getNormal(vec2 p) {
-        float pixelX = 1.25 / uResolution.y;
-        float pixelY = 1.25 / uResolution.y;
-        float left = waterHeight(p - vec2(pixelX, 0.0));
-        float right = waterHeight(p + vec2(pixelX, 0.0));
-        float down = waterHeight(p - vec2(0.0, pixelY));
-        float up = waterHeight(p + vec2(0.0, pixelY));
-        float dx = (right - left) * 10.0;
-        float dy = (up - down) * 10.0;
-        return normalize(vec3(-dx, -dy, 1.0));
-      }
-
-      float caustics(vec2 p) {
-        vec2 uv = p * 5.5;
-        uv += vec2(uTime * 0.08, -uTime * 0.06);
-        float a = sin(uv.x + sin(uv.y * 1.4));
-        float b = sin(uv.y * 1.2 + cos(uv.x * 0.8));
-        float c = sin((uv.x + uv.y) * 1.4);
-        return pow(abs(a * b * c), 5.0);
-      }
-
-      vec3 skyReflection(vec3 N) {
-        float horizon = 1.0 - abs(N.y);
-        horizon = smoothstep(0.15, 1.0, horizon);
-        vec3 deepSky = vec3(0.035, 0.16, 0.25);
-        vec3 brightSky = vec3(0.48, 0.84, 0.91);
-        return mix(deepSky, brightSky, horizon);
-      }
 
       void main() {
         float aspect = uResolution.x / uResolution.y;
         vec2 p = (vUv - vec2(0.5));
         p.x *= aspect;
-        vec3 N = getNormal(p);
-        vec3 V = normalize(vec3(0.0, 0.0, 1.0));
-        vec3 L = normalize(vec3(-0.42, 0.48, 0.76));
-        vec3 L2 = normalize(vec3(0.52, 0.16, 0.63));
-        float diffuse = max(dot(N, L), 0.0);
-        float fill = max(dot(N, L2), 0.0);
-        float cosView = clamp(dot(N, V), 0.0, 1.0);
-        float fresnel = pow(1.0 - cosView, 5.0);
-        vec3 water = uWaterColor;
-        float depth = smoothstep(0.0, 1.0, vUv.y);
-        water *= mix(0.70, 1.06, depth);
-        vec2 refractedUV = vUv + N.xy * 0.045;
-        float refractNoise = noise(refractedUV * 14.0 + uTime * 0.015);
-        vec3 refracted = water;
-        refracted += vec3(0.014, 0.055, 0.050) * refractNoise;
-        float caustic = caustics(p);
-        caustic *= 1.0 - smoothstep(0.25, 1.0, length(p));
-        vec3 causticLight = vec3(0.15, 0.90, 0.70) * caustic * 0.24;
-        vec3 reflection = skyReflection(N);
+
+        vec2 slope = vec2(0.0);
+        float crestSum = 0.0;
+        float cursorRepel = 0.0;
+
+        // 1. Direct interactive water repelling meniscus under cursor
+        if (uPointerActive > 0.5) {
+          vec2 toCursor = p - uPointer;
+          float curDist = length(toCursor);
+          float curRadius = 0.18;
+          if (curDist < curRadius && curDist > 0.001) {
+            float nd = curDist / curRadius;
+            float repelForce = (1.0 - nd * nd);
+            repelForce = repelForce * repelForce;
+            vec2 cDir = toCursor / curDist;
+            slope += cDir * (repelForce * 1.5);
+            cursorRepel = repelForce;
+          }
+        }
+
+        // 2. Propagating clear water ripple waves
+        for (int i = 0; i < MAX_WAVES; i++) {
+          if (float(i) >= uWaveCount) break;
+          vec4 w = uWaves[i];
+          if (w.z < 0.0) continue;
+          float age = uTime - w.z;
+          if (age <= 0.0 || age > ${RIPPLE_LIFETIME.toFixed(2)}) continue;
+
+          float radius = age * ${RIPPLE_SPEED.toFixed(3)};
+          vec2 toPoint = p - w.xy;
+          float d = length(toPoint);
+          float front = d - radius;
+
+          // Crisp realistic water wave packet (thin primary crest + subtle concentric echoes)
+          float primary = exp(-front * front * 4200.0);
+          float secondary = sin(front * 140.0) * exp(-front * front * 1400.0) * 0.42;
+          float waveH = primary + secondary;
+
+          float ageFade = pow(clamp(1.0 - (age / ${RIPPLE_LIFETIME.toFixed(2)}), 0.0, 1.0), 1.25);
+          vec2 screenUV = vUv;
+          float edgeFade = smoothstep(0.0, 0.04, min(min(screenUV.x, 1.0 - screenUV.x), min(screenUV.y, 1.0 - screenUV.y)));
+          float waveScale = ageFade * edgeFade * w.w;
+
+          if (d > 0.001) {
+            vec2 dir = toPoint / d;
+            float dFront = -2.0 * 4200.0 * front * primary + 140.0 * cos(front * 140.0) * exp(-front * front * 1400.0) * 0.42;
+            slope += dir * dFront * (waveScale * 0.0032);
+          }
+
+          if (waveH > 0.0) {
+            crestSum += waveH * waveScale;
+          }
+        }
+
+        float totalActivity = length(slope) + crestSum + cursorRepel;
+        if (totalActivity < 0.002) {
+          gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+          return;
+        }
+
+        // 3. Realistic Water Refraction, Caustic Highlights & Fresnel Glint
+        vec3 N = normalize(vec3(-slope * 1.6, 1.0));
+        vec3 L = normalize(vec3(-0.35, 0.55, 0.75));
+        vec3 V = vec3(0.0, 0.0, 1.0);
         vec3 H = normalize(L + V);
-        float sharpSpecular = pow(max(dot(N, H), 0.0), 320.0) * 1.4;
-        float broadSpecular = pow(max(dot(N, H), 0.0), 40.0) * 0.25;
-        
-        vec3 color = refracted * (0.52 + diffuse * 0.40 + fill * 0.12);
-        color = mix(color, reflection, fresnel * 0.62);
-        color += causticLight;
-        color += vec3(1.0, 0.97, 0.86) * (sharpSpecular * 1.15 + broadSpecular);
-        float shimmer = noise(vUv * 100.0 + vec2(uTime * 0.04, -uTime * 0.025));
-        color += vec3((shimmer - 0.5) * 0.012);
-        color += mix(vec3(0.0, 0.045, 0.055), vec3(0.035, 0.09, 0.105), vUv.y) * 0.15;
-        
-        color = color / (color + vec3(0.82));
-        color = pow(color, vec3(0.88));
-        color *= 1.10;
-        
-        // Calculate alpha based on surface disturbance
-        float normalDist = length(N.xy);
-        float specularLight = sharpSpecular * 1.15 + broadSpecular;
-        float alpha = clamp(normalDist * 4.5 + specularLight * 3.0 + caustic * 2.5, 0.0, 1.0);
-        
-        gl_FragColor = vec4(clamp(color, 0.0, 1.0), alpha);
+        float NdotH = max(dot(N, H), 0.0);
+        float specular = pow(NdotH, 36.0);
+        float fresnel = pow(1.0 - max(dot(N, V), 0.0), 2.5);
+
+        // Light mode: Crystal-clear azure water surface
+        vec3 lightSheen = vec3(0.72, 0.90, 1.0);
+        vec3 lightGlint = vec3(1.0, 1.0, 1.0);
+        vec3 lightColor = mix(lightSheen, lightGlint, clamp(specular * 1.4 + cursorRepel * 0.3, 0.0, 1.0));
+        float lightAlpha = clamp(crestSum * 0.28 + cursorRepel * 0.20 + specular * 0.42 + fresnel * 0.22, 0.0, 0.45);
+
+        // Dark mode: Deep bioluminescent azure glow
+        vec3 darkSheen = vec3(0.35, 0.68, 1.0);
+        vec3 darkGlint = vec3(0.85, 0.95, 1.0);
+        vec3 darkColor = mix(darkSheen, darkGlint, clamp(specular * 1.3, 0.0, 1.0));
+        float darkAlpha = clamp(crestSum * 0.32 + cursorRepel * 0.25 + specular * 0.48 + fresnel * 0.26, 0.0, 0.52);
+
+        vec3 finalColor = mix(lightColor, darkColor, uIsDark);
+        float alpha = mix(lightAlpha, darkAlpha, uIsDark);
+
+        gl_FragColor = vec4(finalColor * alpha, alpha);
       }
     `;
 
@@ -334,13 +443,20 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
     const uResolution = gl.getUniformLocation(program, 'uResolution') as WebGLUniformLocation;
     const uTime = gl.getUniformLocation(program, 'uTime') as WebGLUniformLocation;
     const uWaterColor = gl.getUniformLocation(program, 'uWaterColor') as WebGLUniformLocation;
+    const uIsDark = gl.getUniformLocation(program, 'uIsDark') as WebGLUniformLocation;
     const uWaveCount = gl.getUniformLocation(program, 'uWaveCount') as WebGLUniformLocation;
+    const uPointer = gl.getUniformLocation(program, 'uPointer') as WebGLUniformLocation;
+    const uPointerActive = gl.getUniformLocation(program, 'uPointerActive') as WebGLUniformLocation;
+
     const waveLocations: WebGLUniformLocation[] = [];
     for (let i = 0; i < MAX_WAVES; i++) {
       waveLocations.push(gl.getUniformLocation(program, `uWaves[${i}]`) as WebGLUniformLocation);
     }
 
-    const waves: any[] = [];
+    const waves: any[] = [
+      { x: 0.08, y: 0.06, start: performance.now() / 1000 - 0.4, strength: RIPPLE_INTENSITY * 0.85 },
+      { x: -0.12, y: -0.04, start: performance.now() / 1000 - 1.4, strength: RIPPLE_INTENSITY * 0.70 }
+    ];
     let width = 1;
     let height = 1;
 
@@ -377,47 +493,143 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
       while (waves.length > MAX_WAVES) waves.shift();
     };
 
+    // Pod repulsion physics: icons smoothly push away from pointer
+    const REPEL_RADIUS = 260;
+    const MAX_PUSH = 95;
+
+    interface PodRepelState {
+      element: HTMLElement;
+      currentX: number;
+      currentY: number;
+      targetX: number;
+      targetY: number;
+    }
+
+    const podElements = Array.from(hero.querySelectorAll<HTMLElement>('.pod-repel-wrapper'));
+    const podStates: PodRepelState[] = podElements.map(el => ({
+      element: el,
+      currentX: 0,
+      currentY: 0,
+      targetX: 0,
+      targetY: 0,
+    }));
+
+    const pointerState = {
+      x: -9999,
+      y: -9999,
+      simX: 0,
+      simY: 0,
+      active: false,
+    };
+
+    const updatePodsPhysics = () => {
+      for (let i = 0; i < podStates.length; i++) {
+        const pod = podStates[i];
+        if (pointerState.active) {
+          const rect = pod.element.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2 - pod.currentX;
+          const centerY = rect.top + rect.height / 2 - pod.currentY;
+
+          const dx = centerX - pointerState.x;
+          const dy = centerY - pointerState.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < REPEL_RADIUS && dist > 1.0) {
+            const factor = Math.pow(1.0 - dist / REPEL_RADIUS, 1.35);
+            pod.targetX = (dx / dist) * factor * MAX_PUSH;
+            pod.targetY = (dy / dist) * factor * MAX_PUSH;
+          } else {
+            pod.targetX = 0;
+            pod.targetY = 0;
+          }
+        } else {
+          pod.targetX = 0;
+          pod.targetY = 0;
+        }
+
+        // Fluid spring interpolation (butter-smooth at 60fps)
+        pod.currentX += (pod.targetX - pod.currentX) * 0.14;
+        pod.currentY += (pod.targetY - pod.currentY) * 0.14;
+
+        const isDisplaced = Math.abs(pod.currentX) > 0.1 || Math.abs(pod.currentY) > 0.1;
+        if (isDisplaced) {
+          pod.element.style.transform = `translate3d(${pod.currentX.toFixed(2)}px, ${pod.currentY.toFixed(2)}px, 0) scale(${1.0 + Math.min(0.08, Math.hypot(pod.currentX, pod.currentY) / 1000)})`;
+          if (Math.hypot(pod.currentX, pod.currentY) > 8) {
+            pod.element.classList.add('repelled');
+          } else {
+            pod.element.classList.remove('repelled');
+          }
+        } else if (pod.element.style.transform !== '') {
+          pod.element.style.transform = '';
+          pod.element.classList.remove('repelled');
+        }
+      }
+    };
+
     let lastPointerX: number | null = null;
     let lastPointerY: number | null = null;
     let lastWaveTime = 0;
 
+    const handlePointerMove = (clientX: number, clientY: number) => {
+      const now = performance.now();
+      pointerState.x = clientX;
+      pointerState.y = clientY;
+      const sim = pointerToSimulation(clientX, clientY);
+      pointerState.simX = sim.x;
+      pointerState.simY = sim.y;
+      pointerState.active = true;
+
+      if (lastPointerX === null || lastPointerY === null) {
+        lastPointerX = clientX;
+        lastPointerY = clientY;
+        return;
+      }
+      const dx = clientX - lastPointerX;
+      const dy = clientY - lastPointerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance >= HOVER_DISTANCE_THRESHOLD && now - lastWaveTime >= HOVER_WAVE_INTERVAL * 1000) {
+        const velocity = Math.min(1.5, distance / 60);
+        const strength = RIPPLE_INTENSITY * (0.35 + velocity * 0.20);
+        addWave(clientX, clientY, strength);
+        lastPointerX = clientX;
+        lastPointerY = clientY;
+        lastWaveTime = now;
+      }
+    };
+
     this.pointerEnterHandler = (event: PointerEvent) => {
-      addWave(event.clientX, event.clientY, RIPPLE_INTENSITY);
+      pointerState.x = event.clientX;
+      pointerState.y = event.clientY;
+      const sim = pointerToSimulation(event.clientX, event.clientY);
+      pointerState.simX = sim.x;
+      pointerState.simY = sim.y;
+      pointerState.active = true;
       lastPointerX = event.clientX;
       lastPointerY = event.clientY;
       lastWaveTime = performance.now();
     };
 
     this.pointerMoveHandler = (event: PointerEvent) => {
-      const now = performance.now();
-      if (lastPointerX === null || lastPointerY === null) {
-        lastPointerX = event.clientX;
-        lastPointerY = event.clientY;
-        return;
-      }
-      const dx = event.clientX - lastPointerX;
-      const dy = event.clientY - lastPointerY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      const threshold = Math.max(3, Math.min(12, window.innerWidth * 0.004));
-      const enoughDistance = distance >= threshold;
-      const enoughTime = now - lastWaveTime >= POINTER_INTERVAL * 1000;
-      if (enoughDistance || enoughTime) {
-        const velocity = Math.min(1.6, distance / 45);
-        const strength = RIPPLE_INTENSITY * (0.84 + velocity * 0.30);
-        addWave(event.clientX, event.clientY, strength);
-        lastPointerX = event.clientX;
-        lastPointerY = event.clientY;
-        lastWaveTime = now;
-      }
+      handlePointerMove(event.clientX, event.clientY);
     };
 
     this.pointerLeaveHandler = () => {
       lastPointerX = null;
       lastPointerY = null;
+      pointerState.active = false;
     };
 
     this.pointerDownHandler = (event: PointerEvent) => {
-      addWave(event.clientX, event.clientY, RIPPLE_INTENSITY * 1.30);
+      pointerState.x = event.clientX;
+      pointerState.y = event.clientY;
+      const sim = pointerToSimulation(event.clientX, event.clientY);
+      pointerState.simX = sim.x;
+      pointerState.simY = sim.y;
+      pointerState.active = true;
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+      lastWaveTime = performance.now();
+      addWave(event.clientX, event.clientY, RIPPLE_INTENSITY * 2.2);
     };
 
     let activeTouch: number | null = null;
@@ -430,8 +642,16 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
       activeTouch = touch.identifier;
       lastTouchX = touch.clientX;
       lastTouchY = touch.clientY;
-      addWave(touch.clientX, touch.clientY, RIPPLE_INTENSITY * 1.35);
+      pointerState.x = touch.clientX;
+      pointerState.y = touch.clientY;
+      const sim = pointerToSimulation(touch.clientX, touch.clientY);
+      pointerState.simX = sim.x;
+      pointerState.simY = sim.y;
+      pointerState.active = true;
+      lastPointerX = touch.clientX;
+      lastPointerY = touch.clientY;
       lastWaveTime = performance.now();
+      addWave(touch.clientX, touch.clientY, RIPPLE_INTENSITY * 2.0);
     };
 
     this.touchMoveHandler = (event: TouchEvent) => {
@@ -444,40 +664,21 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       }
       if (!touch) return;
-      if (lastTouchX === null || lastTouchY === null) {
-        lastTouchX = touch.clientX;
-        lastTouchY = touch.clientY;
-        return;
-      }
-      const dx = touch.clientX - lastTouchX;
-      const dy = touch.clientY - lastTouchY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      const now = performance.now();
-      if (distance >= 4 || now - lastWaveTime >= 65) {
-        const velocity = Math.min(1.6, distance / 40);
-        addWave(touch.clientX, touch.clientY, RIPPLE_INTENSITY * (0.90 + velocity * 0.32));
-        lastTouchX = touch.clientX;
-        lastTouchY = touch.clientY;
-        lastWaveTime = now;
-      }
+      handlePointerMove(touch.clientX, touch.clientY);
     };
 
     this.touchEndHandler = () => {
       activeTouch = null;
       lastTouchX = null;
       lastTouchY = null;
+      pointerState.active = false;
     };
 
-    // Attach both pointer and mouse events for maximum compatibility
+    // Attach pointer and touch events
     hero.addEventListener('pointerenter', this.pointerEnterHandler as any, { passive: true });
     hero.addEventListener('pointermove', this.pointerMoveHandler as any, { passive: true });
     hero.addEventListener('pointerleave', this.pointerLeaveHandler as any, { passive: true });
     hero.addEventListener('pointerdown', this.pointerDownHandler as any, { passive: true });
-
-    hero.addEventListener('mouseenter', this.pointerEnterHandler as any, { passive: true });
-    hero.addEventListener('mousemove', this.pointerMoveHandler as any, { passive: true });
-    hero.addEventListener('mouseleave', this.pointerLeaveHandler as any, { passive: true });
-    hero.addEventListener('mousedown', this.pointerDownHandler as any, { passive: true });
 
     hero.addEventListener('touchstart', this.touchStartHandler as any, { passive: true });
     hero.addEventListener('touchmove', this.touchMoveHandler as any, { passive: true });
@@ -488,8 +689,7 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const getWaterColor = () => {
       if (!this.isDark) {
-        // Transparent blue water for light mode (Azure blue-500: #2170e4)
-        return [33 / 255, 112 / 255, 228 / 255];
+        return [24 / 255, 142 / 255, 230 / 255];
       }
       
       const bg = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
@@ -497,9 +697,9 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
         const r = parseInt(bg.substring(1, 3), 16) / 255;
         const g = parseInt(bg.substring(3, 5), 16) / 255;
         const b = parseInt(bg.substring(5, 7), 16) / 255;
-        return [r, g, b];
+        return [r * 0.85 + 0.03, g * 0.85 + 0.08, b * 0.85 + 0.18];
       }
-      return [7/255, 13/255, 24/255];
+      return [14 / 255, 42 / 255, 82 / 255];
     };
 
     const render = () => {
@@ -510,12 +710,20 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       }
 
+      // Smoothly update floating icon pod repulsion physics every frame
+      updatePodsPhysics();
+
       gl.uniform2f(uResolution, width, height);
       gl.uniform1f(uTime, elapsed);
 
       const waterColor = getWaterColor();
       gl.uniform3f(uWaterColor, waterColor[0], waterColor[1], waterColor[2]);
+      gl.uniform1f(uIsDark, this.isDark ? 1.0 : 0.0);
       gl.uniform1f(uWaveCount, waves.length);
+
+      // Direct pointer meniscus repelling field
+      gl.uniform2f(uPointer, pointerState.simX, pointerState.simY);
+      gl.uniform1f(uPointerActive, pointerState.active ? 1.0 : 0.0);
 
       for (let i = 0; i < MAX_WAVES; i++) {
         if (i < waves.length) {
@@ -526,7 +734,7 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       }
 
-      gl.clearColor(0, 0, 0, 0); // Transparent clear color
+      gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
 

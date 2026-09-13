@@ -35,38 +35,57 @@
 
 <!-- ========== HERO SECTION ========== -->
 <section class="hero" id="hero-section" #heroSection>
-  <canvas #waterCanvas id="waterCanvas"></canvas>
   <div class="hero-bg-grid"></div>
   <div class="hero-glow"></div>
+  <canvas #waterCanvas id="waterCanvas"></canvas>
+
+  <!-- Floating Water Icons Layer -->
+  <div class="floating-icons-container" aria-hidden="true">
+    @for (icon of floatingIcons; track icon.alt) {
+    <div class="floating-icon-pod"
+      [ngClass]="['pod-' + icon.size, icon.animClass]"
+      [style.top]="icon.top"
+      [style.left]="icon.left ?? null"
+      [style.right]="icon.right ?? null"
+      [style.animation-delay]="icon.delay">
+      <div class="pod-repel-wrapper">
+        <div class="pod-water-glow"></div>
+        <div class="pod-ripple-ring"></div>
+        <div class="pod-glass">
+          <img [src]="icon.src" [alt]="icon.alt" class="pod-icon" />
+        </div>
+      </div>
+    </div>
+    }
+  </div>
 
   <div class="hero-content">
     <div class="hero-badge">
       <span class="badge-dot"></span>
-      <span>AI-Powered Customer Support Platform</span>
+      <span>Next-Generation Support & Ticketing</span>
     </div>
 
     <h1 class="hero-title">
-      Resolve tickets <span class="gradient-text">faster</span> with<br />
-      intelligent AI agents
+      Deliver exceptional customer support, <span class="gradient-text">faster</span>
     </h1>
 
     <p class="hero-subtitle">
-      TixManager combines multi-agent AI with an intuitive support workspace.
-      Automatically triage, respond, and resolve customer issues — reducing response
-      times by up to 80%.
+      TixManager streamlines your entire support operation — from automated ticket triage
+      and AI-powered reply drafts to live SLA tracking and seamless team collaboration.
+      Keep customers delighted and agents productive.
     </p>
 
     <div class="hero-actions">
       <a routerLink="/auth/login" class="btn-hero-primary" id="hero-get-started-btn">
-        <span>Access Portal</span>
+        <span>Get Started</span>
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="5" y1="12" x2="19" y2="12" />
           <polyline points="12 5 19 12 12 19" />
         </svg>
       </a>
-      <a routerLink="/auth/login" class="btn-hero-secondary" id="hero-sign-in-btn">
-        <span>Sign In</span>
+      <a href="#features-section" class="btn-hero-secondary" id="hero-features-btn">
+        <span>Explore Features</span>
       </a>
     </div>
 
@@ -86,11 +105,11 @@
 <section class="features-section" id="features-section">
   <div class="section-container">
     <div class="section-header">
-      <span class="section-badge">Features</span>
-      <h2 class="section-title">Everything your support team needs</h2>
+      <span class="section-badge">Platform Features</span>
+      <h2 class="section-title">Built for high-performing support teams</h2>
       <p class="section-subtitle">
-        From AI-powered automation to enterprise-grade security, TixManager
-        delivers a complete support solution.
+        Everything you need to manage queues, automate routine tasks, and deliver
+        fast, personalized customer service at scale.
       </p>
     </div>
 
@@ -110,13 +129,13 @@
 <section class="cta-section" id="cta-section">
   <div class="cta-container">
     <div class="cta-glow"></div>
-    <h2 class="cta-title">Ready to transform your support?</h2>
+    <h2 class="cta-title">Ready to transform your customer support?</h2>
     <p class="cta-subtitle">
-      Join thousands of teams using TixManager to deliver faster, smarter customer support.
+      Start resolving tickets faster and elevating customer satisfaction today with TixManager.
     </p>
     <div class="cta-actions">
       <a routerLink="/auth/login" class="btn-cta-primary" id="cta-get-started-btn">
-        <span>Sign In to Dashboard</span>
+        <span>Access Your Dashboard</span>
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="5" y1="12" x2="19" y2="12" />
@@ -133,6 +152,6 @@
     <div class="footer-brand">
       <app-logo size="sm"></app-logo>
     </div>
-    <p class="footer-copy">© {{ currentYear }} TixManager. Built with Angular & Spring Boot.</p>
+    <p class="footer-copy">© {{ currentYear }} TixManager. Modern customer support platform.</p>
   </div>
 </footer>
