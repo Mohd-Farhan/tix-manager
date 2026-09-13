@@ -6,35 +6,49 @@ import { tap } from 'rxjs';
  * HTTP INTERCEPTOR: LoggingInterceptor (Frontend Observability & Telemetry)
  * ==============================================================================================
  * 
- * WHY THIS IS USED (Production-Grade Observability):
- * 1. Network Latency Tracking: Measures roundtrip HTTP request duration with high-precision timer.
- * 2. Slow Request Warning: Emits warnings for network calls exceeding 1000ms latency.
- * 3. Client Telemetry: Provides structured console traces of outbound API interactions.
+ * Production-grade request correlation & latency tracking.
+ * 1. Propagates or injects 'X-Correlation-ID' header for outbound requests if absent.
+ * 2. Reads 'X-Correlation-ID' from backend response headers.
+ * 3. Logs telemetry with traceId correlation: [HTTP] [traceId] GET /api/... -> 200 (45ms).
  */
 export const loggingInterceptor: HttpInterceptorFn = (req, next) => {
   const startedAt = performance.now();
   const method = req.method.toUpperCase();
   const url = req.url;
 
-  return next(req).pipe(
+  // Propagate or generate correlation trace ID for end-to-end tracing
+  const correlationId =
+    req.headers.get('X-Correlation-ID') ||
+    (typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2, 10));
+
+  const tracedReq = req.clone({
+    headers: req.headers.set('X-Correlation-ID', correlationId),
+  });
+
+  return next(tracedReq).pipe(
     tap({
       next: (event) => {
         if (event instanceof HttpResponse) {
           const elapsed = Math.round(performance.now() - startedAt);
           const status = event.status;
+          const traceId = event.headers.get('X-Correlation-ID') || correlationId;
 
           // Highlight slow responses
           if (elapsed > 1000) {
-            console.warn(`[HTTP SLOW] ${method} ${url} -> ${status} (${elapsed}ms)`);
+            console.warn(`[HTTP SLOW] [${traceId}] ${method} ${url} -> ${status} (${elapsed}ms)`);
           } else {
-            console.debug(`[HTTP] ${method} ${url} -> ${status} (${elapsed}ms)`);
+            console.debug(`[HTTP] [${traceId}] ${method} ${url} -> ${status} (${elapsed}ms)`);
           }
         }
       },
       error: (error) => {
         const elapsed = Math.round(performance.now() - startedAt);
-        console.error(`[HTTP FAIL] ${method} ${url} -> ${error.status || 'ERR'} (${elapsed}ms)`, error);
+        const traceId = error.headers?.get('X-Correlation-ID') || correlationId;
+        console.error(`[HTTP FAIL] [${traceId}] ${method} ${url} -> ${error.status || 'ERR'} (${elapsed}ms)`, error);
       },
     })
   );
 };
+

@@ -72,13 +72,19 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
         case 500:
         case 502:
-        case 503:
-          toastService.error('The server encountered an error. Our engineering team has been notified.', 'Server Error');
+        case 503: {
+          const correlationId = error.headers?.get('X-Correlation-ID') || error.headers?.get('x-correlation-id');
+          const ref = correlationId ? ` (Ref: ${correlationId.substring(0, 8)})` : '';
+          toastService.error(`The server encountered an error. Our engineering team has been notified.${ref}`, 'Server Error');
           break;
+        }
 
-        default:
-          toastService.error(errorMessage, `HTTP ${error.status}`);
+        default: {
+          const correlationId = error.headers?.get('X-Correlation-ID') || error.headers?.get('x-correlation-id');
+          const ref = correlationId ? ` (Ref: ${correlationId.substring(0, 8)})` : '';
+          toastService.error(`${errorMessage}${ref}`, `HTTP ${error.status}`);
           break;
+        }
       }
 
       return throwError(() => error);
