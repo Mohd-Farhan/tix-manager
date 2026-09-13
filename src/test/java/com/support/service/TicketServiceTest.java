@@ -62,6 +62,9 @@ class TicketServiceTest {
     @Mock
     private MessageMapper messageMapper;
 
+    @Mock
+    private AuditService auditService;
+
     @InjectMocks
     private TicketService ticketService;
 

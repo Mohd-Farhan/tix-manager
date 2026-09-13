@@ -62,6 +62,9 @@ class AuthControllerTest {
     @MockBean
     private UserMapper userMapper;
 
+    @MockBean
+    private com.support.service.AuditService auditService;
+
 
     /**
      * TEST CASE 3: Successful Login returns 200 OK and JWT Token.
@@ -113,5 +116,15 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401));
+    }
+
+    /**
+     * TEST CASE 5: Logout returns 200 OK.
+     */
+    @Test
+    @DisplayName("POST /api/auth/logout — Return 200 OK")
+    void testLogout_Success() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isOk());
     }
 }

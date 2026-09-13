@@ -54,6 +54,9 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private AuditService auditService;
+
     @Transactional
     public UserDTO createUser(CreateUserRequest request, String currentUsername) {
         User caller = userRepository.findByUsername(currentUsername)
@@ -86,6 +89,8 @@ public class UserService {
         user.setRole(request.getRole());
 
         userRepository.save(user);
+        auditService.recordEntityChange("USER", user.getId(), "CREATE", currentUsername,
+                "Created user '" + user.getUsername() + "' with role " + user.getRole());
         log.info("User created: username={}, role={}, createdBy={}", user.getUsername(), user.getRole(), currentUsername);
         return userMapper.toDTO(user);
     }
@@ -185,6 +190,8 @@ public class UserService {
                 newUser.setRole(role);
 
                 userRepository.save(newUser);
+                auditService.recordEntityChange("USER", newUser.getId(), "CREATE", currentUsername,
+                        "Created user '" + newUser.getUsername() + "' via CSV bulk upload with role " + newUser.getRole());
                 batchUsernames.add(username.toLowerCase());
                 batchEmails.add(email.toLowerCase());
                 successCount++;
@@ -216,6 +223,8 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
+        auditService.recordEntityChange("USER", user.getId(), "CREATE", user.getUsername(),
+                "User self-registered with role " + user.getRole());
         log.info("User self-registered: username={}, role={}", user.getUsername(), user.getRole());
         return userMapper.toDTO(user);
     }
@@ -246,6 +255,8 @@ public class UserService {
         }
 
         userRepository.save(existingUser);
+        auditService.recordEntityChange("USER", existingUser.getId(), "UPDATE", null,
+                "User profile updated for '" + existingUser.getUsername() + "'");
         log.info("Profile updated for userId={}", id);
         return userMapper.toDTO(existingUser);
     }
@@ -261,6 +272,8 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         userRepository.save(user);
+        auditService.recordEntityChange("USER", user.getId(), "UPDATE_PASSWORD", user.getUsername(),
+                "Password updated for user '" + user.getUsername() + "'");
         log.info("Password successfully updated for userId={}", userId);
     }
 
@@ -289,6 +302,8 @@ public class UserService {
 
         target.setDeleted(true);
         userRepository.save(target);
+        auditService.recordEntityChange("USER", target.getId(), "DELETE", currentUsername,
+                "User '" + target.getUsername() + "' deactivated (soft-deleted)");
         log.warn("User soft-deleted: userId={}, username={}, deletedBy={}", userId, target.getUsername(), currentUsername != null ? currentUsername : "SYSTEM");
     }
 

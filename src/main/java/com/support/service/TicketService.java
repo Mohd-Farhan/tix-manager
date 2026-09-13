@@ -66,6 +66,9 @@ public class TicketService {
     @Autowired
     private MessageMapper messageMapper;
 
+    @Autowired
+    private AuditService auditService;
+
     /**
      * MUTATION: Create a new support ticket and record initial audit history.
      */
@@ -78,6 +81,8 @@ public class TicketService {
         ticket.setCustomer(customer);
         ticket.setStatus(TicketStatus.OPEN);
         ticketRepository.save(ticket);
+        auditService.recordEntityChange("TICKET", ticket.getId(), "CREATE", customer.getUsername(),
+                "Ticket created: '" + ticket.getTitle() + "'");
         log.info("Created ticket id={} for customer id={}", ticket.getId(), customer.getId());
 
         // Audit History Entry
@@ -118,6 +123,8 @@ public class TicketService {
         ticket.setAssignedAgent(agent);
         ticket.setStatus(TicketStatus.IN_PROGRESS);
         ticketRepository.save(ticket);
+        auditService.recordEntityChange("TICKET", ticket.getId(), "ASSIGN", agent.getUsername(),
+                "Ticket assigned to agent '" + agent.getUsername() + "'");
         log.info("Ticket id={} assigned to agent id={}", ticketId, agentId);
 
         TicketStatusHistory history = new TicketStatusHistory();
@@ -144,6 +151,8 @@ public class TicketService {
         TicketStatus oldStatus = ticket.getStatus();
         ticket.setStatus(newStatus);
         ticketRepository.save(ticket);
+        auditService.recordEntityChange("TICKET", ticket.getId(), "STATUS_CHANGE", changedBy.getUsername(),
+                "Ticket status updated from " + oldStatus + " to " + newStatus);
         log.info("Ticket id={} status updated: {} -> {} by userId={}", ticketId, oldStatus, newStatus, changedByUserId);
 
         // Audit History Entry
@@ -172,6 +181,8 @@ public class TicketService {
         message.setSender(sender);
         message.setContent(content);
         messageRepository.save(message);
+        auditService.recordEntityChange("MESSAGE", message.getId(), "CREATE", sender.getUsername(),
+                "Added message to ticket #" + ticketId);
         log.info("Added message id={} to ticket id={} by sender id={}", message.getId(), ticketId, senderId);
 
         return messageMapper.toResponse(message);
@@ -243,6 +254,8 @@ public class TicketService {
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
         ticket.setDeleted(true);
         ticketRepository.save(ticket);
+        auditService.recordEntityChange("TICKET", ticket.getId(), "DELETE", null,
+                "Ticket #" + ticketId + " deactivated (soft-deleted)");
         log.warn("Ticket id={} soft-deleted", ticketId);
     }
 

@@ -52,11 +52,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
-                            log.warn("Security rejection 401 [{} {}]: {}", request.getMethod(), request.getRequestURI(), authException.getMessage());
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            log.warn("Security rejection [{} {}]: {}", request.getMethod(), request.getRequestURI(), authException.getMessage());
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType("application/json");
                             response.getWriter().write(String.format(
-                                    "{\"timestamp\":\"%s\",\"status\":401,\"error\":\"Unauthorized\",\"message\":\"%s\",\"path\":\"%s\"}",
+                                    "{\"timestamp\":\"%s\",\"status\":403,\"error\":\"Forbidden\",\"message\":\"%s\",\"path\":\"%s\"}",
                                     LocalDateTime.now(), authException.getMessage(), request.getRequestURI()));
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
