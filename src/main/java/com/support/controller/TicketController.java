@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -42,6 +43,7 @@ import java.util.List;
  *    - Object-level access control with custom SpEL evaluator `@PreAuthorize("@ticketSecurity.canAccessTicket(...)")`.
  * 3. OpenAPI / Swagger Documentation: Fully annotated with summaries and response codes for interactive API discovery.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/tickets")
 @Tag(name = "Tickets", description = "Endpoints for ticket creation, triage, messaging, and status transitions")
@@ -65,6 +67,8 @@ public class TicketController {
     public ResponseEntity<TicketResponse> createTicket(
             @Valid @RequestBody CreateTicketRequest request,
             Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : "anonymous";
+        log.info("REST: User '{}' creating ticket '{}'", username, request.getTitle());
         Long customerId = securityUtils.resolveUserId(authentication);
         TicketResponse createdTicket = ticketService.createTicket(request, customerId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdTicket);
@@ -154,6 +158,7 @@ public class TicketController {
     public ResponseEntity<TicketResponse> assignTicket(
             @PathVariable Long ticketId,
             @RequestParam Long agentId) {
+        log.info("REST: Assigning ticket id={} to agent id={}", ticketId, agentId);
         TicketResponse ticket = ticketService.assignTicket(ticketId, agentId);
         return ResponseEntity.status(HttpStatus.OK).body(ticket);
     }
@@ -170,6 +175,8 @@ public class TicketController {
             @PathVariable Long ticketId,
             @RequestParam TicketStatus status,
             Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : "anonymous";
+        log.info("REST: User '{}' updating ticket id={} status to {}", username, ticketId, status);
         Long changedByUserId = securityUtils.resolveUserId(authentication);
         TicketResponse ticket = ticketService.updateTicketStatus(ticketId, status, changedByUserId);
         return ResponseEntity.status(HttpStatus.OK).body(ticket);
@@ -187,6 +194,8 @@ public class TicketController {
             @PathVariable Long id,
             @Valid @RequestBody CreateMessageRequest request,
             Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : "anonymous";
+        log.info("REST: User '{}' adding message to ticket id={}", username, id);
         Long senderId = securityUtils.resolveUserId(authentication);
         MessageResponse saved = ticketService.addMessage(id, senderId, request.getContent());
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
@@ -227,6 +236,7 @@ public class TicketController {
     @DeleteMapping("/{ticketId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> softDeleteTicket(@PathVariable Long ticketId) {
+        log.warn("REST: Soft-deleting ticket id={}", ticketId);
         ticketService.softDeleteTicket(ticketId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }

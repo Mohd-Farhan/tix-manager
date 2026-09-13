@@ -11,6 +11,7 @@ import com.support.mapper.MessageMapper;
 import com.support.mapper.TicketMapper;
 import com.support.mapper.TicketStatusHistoryMapper;
 import com.support.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +40,7 @@ import java.util.List;
  * 3. Pagination & High-Volume Query Optimization:
  *    - Provides Pageable overloads to stream large ticket queues without memory exhaustion.
  */
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 public class TicketService {
@@ -76,6 +78,7 @@ public class TicketService {
         ticket.setCustomer(customer);
         ticket.setStatus(TicketStatus.OPEN);
         ticketRepository.save(ticket);
+        log.info("Created ticket id={} for customer id={}", ticket.getId(), customer.getId());
 
         // Audit History Entry
         TicketStatusHistory history = new TicketStatusHistory();
@@ -115,6 +118,7 @@ public class TicketService {
         ticket.setAssignedAgent(agent);
         ticket.setStatus(TicketStatus.IN_PROGRESS);
         ticketRepository.save(ticket);
+        log.info("Ticket id={} assigned to agent id={}", ticketId, agentId);
 
         TicketStatusHistory history = new TicketStatusHistory();
         history.setNewStatus(TicketStatus.IN_PROGRESS);
@@ -140,6 +144,7 @@ public class TicketService {
         TicketStatus oldStatus = ticket.getStatus();
         ticket.setStatus(newStatus);
         ticketRepository.save(ticket);
+        log.info("Ticket id={} status updated: {} -> {} by userId={}", ticketId, oldStatus, newStatus, changedByUserId);
 
         // Audit History Entry
         TicketStatusHistory history = new TicketStatusHistory();
@@ -167,6 +172,7 @@ public class TicketService {
         message.setSender(sender);
         message.setContent(content);
         messageRepository.save(message);
+        log.info("Added message id={} to ticket id={} by sender id={}", message.getId(), ticketId, senderId);
 
         return messageMapper.toResponse(message);
     }
@@ -237,6 +243,7 @@ public class TicketService {
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
         ticket.setDeleted(true);
         ticketRepository.save(ticket);
+        log.warn("Ticket id={} soft-deleted", ticketId);
     }
 
     /**

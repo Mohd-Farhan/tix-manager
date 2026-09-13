@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,6 +30,7 @@ import java.util.List;
  * 
  * Manages user profile updates, password changes, agent rosters, and administrative user management.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/users")
 @Tag(name = "Users", description = "Endpoints for profile management, password updates, and user administration")
@@ -49,7 +51,9 @@ public class UserController {
     public ResponseEntity<UserDTO> createUser(
             @Valid @RequestBody CreateUserRequest request,
             Authentication authentication) {
-        UserDTO user = userService.createUser(request, authentication.getName());
+        String actor = authentication != null ? authentication.getName() : "anonymous";
+        log.info("REST: Admin '{}' creating user '{}' with role {}", actor, request.getUsername(), request.getRole());
+        UserDTO user = userService.createUser(request, actor);
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
 
@@ -64,7 +68,9 @@ public class UserController {
     public ResponseEntity<BulkUploadResultDTO> bulkUploadUsers(
             @RequestParam("file") MultipartFile file,
             Authentication authentication) {
-        BulkUploadResultDTO result = userService.bulkUploadUsersCsv(file, authentication.getName());
+        String actor = authentication != null ? authentication.getName() : "anonymous";
+        log.info("REST: Admin '{}' initiated bulk user upload ({})", actor, file.getOriginalFilename());
+        BulkUploadResultDTO result = userService.bulkUploadUsersCsv(file, actor);
         return ResponseEntity.ok(result);
     }
 
@@ -106,6 +112,7 @@ public class UserController {
     public ResponseEntity<Void> updatePassword(
             @PathVariable Long userId,
             @Valid @RequestBody PasswordChangeDTO dto) {
+        log.info("REST: Password update requested for userId={}", userId);
         userService.updatePassword(userId, dto);
         return ResponseEntity.ok().build();
     }
@@ -137,7 +144,9 @@ public class UserController {
     public ResponseEntity<Void> softDeleteUser(
             @PathVariable Long id,
             Authentication authentication) {
-        userService.softDeleteUser(id, authentication.getName());
+        String actor = authentication != null ? authentication.getName() : "anonymous";
+        log.warn("REST: Admin '{}' requested soft-delete for userId={}", actor, id);
+        userService.softDeleteUser(id, actor);
         return ResponseEntity.noContent().build();
     }
 

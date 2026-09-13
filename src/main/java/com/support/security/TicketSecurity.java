@@ -2,6 +2,7 @@ package com.support.security;
 
 import com.support.repository.TicketRepository;
 import com.support.util.SecurityUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
  * Custom SpEL security evaluator for Ticket resource access.
  * Used in @PreAuthorize("@ticketSecurity.canAccessTicket(#ticketId, authentication)") annotations.
  */
+@Slf4j
 @Component("ticketSecurity")
 public class TicketSecurity {
 
@@ -33,8 +35,13 @@ public class TicketSecurity {
 
         // Customers can only access their own tickets
         Long currentUserId = securityUtils.resolveUserId(authentication);
-        return ticketRepository.findById(ticketId)
+        boolean allowed = ticketRepository.findById(ticketId)
                 .map(ticket -> ticket.getCustomer() != null && ticket.getCustomer().getId().equals(currentUserId))
                 .orElse(false);
+
+        if (!allowed) {
+            log.warn("Security rejection: user '{}' (id={}) unauthorized to access ticket id={}", authentication.getName(), currentUserId, ticketId);
+        }
+        return allowed;
     }
 }

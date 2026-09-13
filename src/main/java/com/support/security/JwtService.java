@@ -11,8 +11,10 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 
+@Slf4j
 @Service
 public class JwtService {
 
@@ -28,6 +30,7 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
+        log.debug("Generating JWT token for user: {}", userDetails.getUsername());
         return Jwts.builder()
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
@@ -38,7 +41,11 @@ public class JwtService {
 
     public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        boolean valid = username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        if (!valid) {
+            log.warn("JWT token invalid or expired for user: {}", userDetails.getUsername());
+        }
+        return valid;
     }
 
     public String extractUsername(String token) {

@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
  * 
  * Manages JWT authentication token issuance.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "Endpoints for JWT login")
@@ -48,6 +50,8 @@ public class AuthController {
     })
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginDTO loginDTO) {
+        log.info("Login attempt for user: {}", loginDTO.getUsername());
+
         // Step 1: Authenticate the user's credentials against DaoAuthenticationProvider
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -59,6 +63,7 @@ public class AuthController {
 
         // Step 3: Generate stateless HMAC-SHA256 JWT token
         String token = jwtService.generateToken(userDetails);
+        log.info("User {} successfully authenticated with role {}", userDetails.getUsername(), userDetails.getUser().getRole());
 
         // Step 4: Build and return the response envelope
         UserDTO userDto = userMapper.toDTO(userDetails.getUser());

@@ -11,6 +11,7 @@ import com.support.exception.InvalidOperationException;
 import com.support.exception.ResourceNotFoundException;
 import com.support.mapper.UserMapper;
 import com.support.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +40,7 @@ import java.util.Set;
  * 2. Explicit Mutation Transactions (@Transactional):
  *    - Ensures atomic user registration, password updates, and soft deletions.
  */
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 public class UserService {
@@ -84,6 +86,7 @@ public class UserService {
         user.setRole(request.getRole());
 
         userRepository.save(user);
+        log.info("User created: username={}, role={}, createdBy={}", user.getUsername(), user.getRole(), currentUsername);
         return userMapper.toDTO(user);
     }
 
@@ -190,6 +193,8 @@ public class UserService {
             throw new InvalidOperationException("Failed to parse CSV file: " + e.getMessage());
         }
 
+        log.info("Bulk upload processed by '{}': totalRows={}, successCount={}, failureCount={}", currentUsername, totalRows, successCount, failureCount);
+
         return BulkUploadResultDTO.builder()
                 .totalRows(totalRows)
                 .successCount(successCount)
@@ -211,6 +216,7 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
+        log.info("User self-registered: username={}, role={}", user.getUsername(), user.getRole());
         return userMapper.toDTO(user);
     }
 
@@ -240,6 +246,7 @@ public class UserService {
         }
 
         userRepository.save(existingUser);
+        log.info("Profile updated for userId={}", id);
         return userMapper.toDTO(existingUser);
     }
 
@@ -254,6 +261,7 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         userRepository.save(user);
+        log.info("Password successfully updated for userId={}", userId);
     }
 
     @Transactional
@@ -281,6 +289,7 @@ public class UserService {
 
         target.setDeleted(true);
         userRepository.save(target);
+        log.warn("User soft-deleted: userId={}, username={}, deletedBy={}", userId, target.getUsername(), currentUsername != null ? currentUsername : "SYSTEM");
     }
 
 

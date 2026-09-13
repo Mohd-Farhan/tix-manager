@@ -2,11 +2,13 @@ package com.support.config;
 
 import com.support.entity.*;
 import com.support.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class DataInitializer implements CommandLineRunner {
 
@@ -28,6 +30,7 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         if (userRepository.count() > 0) {
+            log.debug("Database already seeded, skipping initialization.");
             return;
         }
 
@@ -174,5 +177,7 @@ public class DataInitializer implements CommandLineRunner {
         h4.setNewStatus(TicketStatus.OPEN);
         h4.setChangedBy(alex);
         historyRepository.save(h4);
+
+        log.info("Database initialized with seed data (users: {}, tickets: {})", userRepository.count(), ticketRepository.count());
     }
 }
