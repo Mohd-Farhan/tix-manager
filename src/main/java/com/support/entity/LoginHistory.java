@@ -16,7 +16,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "login_history", indexes = {
-    @Index(name = "idx_login_username", columnList = "username, login_time DESC")
+    @Index(name = "idx_login_username", columnList = "username, login_time DESC"),
+    @Index(name = "idx_login_time", columnList = "login_time DESC")
 })
 @Data
 @Builder
