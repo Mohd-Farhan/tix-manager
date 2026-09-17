@@ -22,3 +22,15 @@ export interface BulkUploadResult {
   errors: string[];
 }
 
+export interface BulkUploadHistoryItem {
+  id: number;
+  fileName: string;
+  uploadedBy: string;
+  totalRows: number;
+  successCount: number;
+  failureCount: number;
+  status: 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED';
+  errors: string[];
+  createdAt: string;
+}
+

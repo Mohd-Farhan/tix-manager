@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { User, BulkUploadResult } from '../models/user.model';
+import { User, BulkUploadResult, BulkUploadHistoryItem } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root',
@@ -31,6 +31,10 @@ export class UserService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<BulkUploadResult>(`${this.apiUrl}/bulk-upload`, formData);
+  }
+
+  getBulkUploadHistory(): Observable<BulkUploadHistoryItem[]> {
+    return this.http.get<BulkUploadHistoryItem[]>(`${this.apiUrl}/bulk-upload/history`);
   }
 
   updatePassword(userId: number, currentPassword: string, newPassword: string): Observable<void> {

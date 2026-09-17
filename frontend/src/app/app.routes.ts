@@ -48,6 +48,7 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', loadComponent: () => import('./pages/admin/dashboard/dashboard.component').then((m) => m.AdminDashboardComponent) },
       { path: 'users', loadComponent: () => import('./pages/admin/user-management/user-management.component').then((m) => m.UserManagementComponent) },
+      { path: 'bulk-upload-history', loadComponent: () => import('./pages/admin/bulk-upload-history/bulk-upload-history.component').then((m) => m.BulkUploadHistoryComponent) },
       { path: 'tickets', loadComponent: () => import('./pages/admin/ticket-oversight/ticket-oversight.component').then((m) => m.TicketOversightComponent) },
       { path: 'settings', loadComponent: () => import('./pages/admin/system-settings/system-settings.component').then((m) => m.SystemSettingsComponent) },
     ]

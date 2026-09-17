@@ -10,12 +10,6 @@ export interface LoginResponse {
   user: User;
 }
 
-export interface RegisterRequest {
-  username: string;
-  email: string;
-  password: string;
-  role: UserRole;
-}
 
 @Injectable({
   providedIn: 'root',
@@ -62,9 +56,6 @@ export class AuthService {
     );
   }
 
-  register(data: RegisterRequest): Observable<User> {
-    return this.http.post<User>(`${environment.apiUrl}/api/auth/register`, data);
-  }
 
   logout(): void {
     localStorage.removeItem(this.tokenKey);

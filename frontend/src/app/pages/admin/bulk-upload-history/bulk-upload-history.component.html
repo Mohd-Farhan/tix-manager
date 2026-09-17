@@ -1,0 +1,347 @@
+<div class="page-container fade-in">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="breadcrumbs">
+        <a routerLink="/admin/users" class="breadcrumb-link">Users</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">Bulk Upload History</span>
+      </div>
+      <h1 class="page-title">Bulk Upload History</h1>
+      <p class="page-subtitle">
+        Immutable audit log of user ingestion batches. Accessible by Admin & System Admin.
+      </p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/admin/users" class="btn-secondary back-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        User Directory
+      </a>
+      <button class="btn-primary upload-btn" (click)="openUploadModal()" id="history-upload-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        New Bulk Import
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Metrics Bar -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-icon-wrap icon-batches">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+        </svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value">{{ totalBatches }}</span>
+        <span class="metric-label">Batches Processed</span>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon-wrap icon-success">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <polyline points="16 11 18 13 22 9"/>
+        </svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value text-success">{{ totalUsersCreated }}</span>
+        <span class="metric-label">Users Provisioned</span>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon-wrap icon-failures">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value" [class.text-error]="totalFailedRows > 0">{{ totalFailedRows }}</span>
+        <span class="metric-label">Rejected Rows</span>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon-wrap icon-rate">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+      <div class="metric-info">
+        <span class="metric-value text-primary">{{ overallSuccessRate }}</span>
+        <span class="metric-label">Ingestion Success Rate</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls Bar -->
+  <div class="controls-bar">
+    <div class="search-wrap">
+      <app-search-box
+        placeholder="Filter by filename, uploader, or ID..."
+        [value]="searchTerm"
+        (searchChange)="onSearch($event)" />
+    </div>
+
+    <div class="filters-wrap">
+      <div class="select-wrapper">
+        <select [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()" class="filter-select" id="history-status-filter">
+          <option value="ALL">All Statuses</option>
+          <option value="SUCCESS">Success</option>
+          <option value="PARTIAL_SUCCESS">Partial Success</option>
+          <option value="FAILED">Failed</option>
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+
+      <button class="btn-icon" (click)="loadHistory()" title="Refresh records" id="history-refresh-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.spin]="isLoading">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Table Section -->
+  <div class="table-container">
+    @if (filteredItems.length === 0) {
+      <app-empty-state
+        icon='<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>'
+        title="No upload history found"
+        description="Try clearing your filters or upload a new CSV file to see ingestion audit records." />
+    } @else {
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th class="col-id">Batch ID</th>
+            <th class="col-date">Date & Time</th>
+            <th class="col-file">File Name</th>
+            <th class="col-uploader">Uploaded By</th>
+            <th class="col-rows">Rows</th>
+            <th class="col-success">Success</th>
+            <th class="col-failed">Failed</th>
+            <th class="col-status">Status</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of filteredItems; track item.id) {
+            <tr class="history-row">
+              <td class="col-id font-mono">#{{ item.id }}</td>
+              <td class="col-date">
+                <div class="date-cell">
+                  <span class="date-primary">{{ item.createdAt | date:'MMM d, y' }}</span>
+                  <span class="date-secondary">{{ item.createdAt | date:'h:mm:ss a' }}</span>
+                </div>
+              </td>
+              <td class="col-file">
+                <div class="file-cell">
+                  <span class="file-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="8" y1="13" x2="16" y2="13"/>
+                      <line x1="8" y1="17" x2="16" y2="17"/>
+                      <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                  </span>
+                  <span class="file-name" title="{{ item.fileName }}">{{ item.fileName }}</span>
+                </div>
+              </td>
+              <td class="col-uploader">
+                <div class="uploader-pill">
+                  <span class="uploader-avatar">{{ item.uploadedBy.charAt(0).toUpperCase() }}</span>
+                  <span class="uploader-name">{{ item.uploadedBy }}</span>
+                </div>
+              </td>
+              <td class="col-rows font-medium">{{ item.totalRows }}</td>
+              <td class="col-success">
+                <span class="count-pill count-success">{{ item.successCount }}</span>
+              </td>
+              <td class="col-failed">
+                @if (item.failureCount > 0) {
+                  <span class="count-pill count-failed">{{ item.failureCount }}</span>
+                } @else {
+                  <span class="count-pill count-zero">0</span>
+                }
+              </td>
+              <td class="col-status">
+                <span class="status-badge" [ngClass]="getStatusBadgeClass(item.status)">
+                  {{ getStatusLabel(item.status) }}
+                </span>
+              </td>
+              <td class="col-actions">
+                @if (item.errors && item.errors.length > 0) {
+                  <button class="btn-action-error" (click)="openErrorModal(item)" title="View row errors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <span>Errors ({{ item.errors.length }})</span>
+                  </button>
+                } @else {
+                  <span class="no-errors-label">Clean Ingest</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+  <!-- Detail / Errors Modal -->
+  <app-modal-shell
+    [visible]="showErrorModal"
+    title="Ingestion Error Log"
+    size="lg"
+    icon='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    (closed)="closeErrorModal()">
+    @if (selectedItem) {
+      <div class="error-modal-body">
+        <div class="batch-summary-box">
+          <div class="summary-col">
+            <span class="summary-label">File Name</span>
+            <span class="summary-value font-mono">{{ selectedItem.fileName }}</span>
+          </div>
+          <div class="summary-col">
+            <span class="summary-label">Uploaded By</span>
+            <span class="summary-value">{{ selectedItem.uploadedBy }}</span>
+          </div>
+          <div class="summary-col">
+            <span class="summary-label">Outcome</span>
+            <span class="summary-value">
+              <span class="status-badge" [ngClass]="getStatusBadgeClass(selectedItem.status)">
+                {{ getStatusLabel(selectedItem.status) }}
+              </span>
+            </span>
+          </div>
+          <div class="summary-col">
+            <span class="summary-label">Rejected / Total</span>
+            <span class="summary-value text-error font-medium">
+              {{ selectedItem.failureCount }} of {{ selectedItem.totalRows }} rows
+            </span>
+          </div>
+        </div>
+
+        <div class="error-list-header">
+          <h3 class="section-title">Row-Level Rejection Reasons</h3>
+          <span class="error-count-tag">{{ selectedItem.errors.length }} issues found</span>
+        </div>
+
+        <div class="error-items-list">
+          @for (err of selectedItem.errors; track $index) {
+            <div class="error-item">
+              <span class="error-index">{{ $index + 1 }}</span>
+              <p class="error-text">{{ err }}</p>
+            </div>
+          }
+        </div>
+
+        <div class="modal-actions-bar">
+          <button class="btn-primary" (click)="closeErrorModal()">Done</button>
+        </div>
+      </div>
+    }
+  </app-modal-shell>
+
+  <!-- Upload Modal -->
+  <app-modal-shell
+    [visible]="showUploadModal"
+    title="Bulk Import Users (CSV)"
+    size="md"
+    icon='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+    (closed)="closeUploadModal()">
+    <div class="bulk-modal-body">
+      <p class="modal-desc">
+        Upload a CSV file with columns: <code>username,email,password,role</code>. Valid roles: <code>CUSTOMER</code>, <code>SUPPORT_AGENT</code>, <code>ADMIN</code>, <code>SYSTEM_ADMIN</code>.
+      </p>
+
+      <div class="sample-download-row">
+        <button class="btn-link" (click)="downloadSampleCsv()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download Sample CSV
+        </button>
+      </div>
+
+      <div class="file-dropzone" [class.has-file]="!!selectedFile">
+        <input type="file" accept=".csv" (change)="onFileSelected($event)" id="bulk-file-input" class="hidden-file-input" />
+        <label for="bulk-file-input" class="dropzone-label">
+          @if (!selectedFile) {
+            <svg class="drop-icon" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span class="drop-main">Click to select CSV file</span>
+            <span class="drop-hint">UTF-8 encoded CSV files up to 5MB</span>
+          } @else {
+            <div class="selected-file-info">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <span class="selected-name">{{ selectedFile.name }}</span>
+              <span class="selected-size">({{ (selectedFile.size / 1024).toFixed(1) }} KB)</span>
+            </div>
+          }
+        </label>
+      </div>
+
+      @if (uploadError) {
+        <div class="alert-box alert-error">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>{{ uploadError }}</span>
+        </div>
+      }
+
+      @if (uploadResult) {
+        <div class="alert-box alert-success">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <div class="alert-content">
+            <strong>Upload Complete:</strong>
+            {{ uploadResult.successCount }} users created, {{ uploadResult.failureCount }} rejected.
+          </div>
+        </div>
+      }
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeUploadModal()">Cancel</button>
+        <button class="btn-primary" [disabled]="!selectedFile || isUploading" (click)="executeUpload()">
+          @if (isUploading) {
+            <span class="spinner-sm"></span>
+            <span>Processing...</span>
+          } @else {
+            <span>Start Upload</span>
+          }
+        </button>
+      </div>
+    </div>
+  </app-modal-shell>
+</div>

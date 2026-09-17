@@ -5,6 +5,10 @@
       <p class="page-subtitle">{{ filteredUsers.length }} users found</p>
     </div>
     <div class="header-actions">
+      <a routerLink="/admin/bulk-upload-history" class="btn-secondary history-btn" id="admin-bulk-history-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Upload History
+      </a>
       <button class="btn-secondary bulk-btn" (click)="openBulkModal()" id="admin-bulk-import-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Bulk Import CSV
@@ -127,8 +131,8 @@
     </div>
     <div class="input-field-group">
       <label class="input-label" for="new-user-password">Initial Password (Optional)</label>
-      <input type="password" id="new-user-password" class="text-input" [(ngModel)]="newPassword" placeholder="Defaults to <username>@123 if blank" />
-      <span class="field-hint">Leave blank to automatically assign default password</span>
+      <input type="password" id="new-user-password" class="text-input" [(ngModel)]="newPassword" placeholder="Min 8 chars, 1 uppercase, 1 digit, 1 special" />
+      <span class="field-hint">Leave blank to auto-assign default password. If provided: min 8 chars, 1 uppercase letter, 1 digit, 1 special character (@#$!%*?&amp;)</span>
     </div>
     <div class="input-field-group">
       <label class="input-label" for="new-user-role">Role</label>

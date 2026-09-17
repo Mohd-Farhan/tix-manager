@@ -9,10 +9,12 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { ModalShellComponent } from '../../../shared/components/modal-shell/modal-shell.component';
 import { ToastService } from '../../../shared/services/toast.service';
 
+import { RouterLink } from '@angular/router';
+
 @Component({
   selector: 'app-admin-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, SearchBoxComponent, EmptyStateComponent, ModalShellComponent],
+  imports: [CommonModule, FormsModule, RouterLink, SearchBoxComponent, EmptyStateComponent, ModalShellComponent],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.css',
 })
@@ -264,9 +266,14 @@ export class UserManagementComponent implements OnInit {
       return;
     }
 
+    const action = user?.status === 'active' ? 'deactivate' : 'reactivate';
+    if (!confirm(`Are you sure you want to ${action} user "${user?.username}"? This action can be reversed by an administrator.`)) {
+      return;
+    }
+
     this.userService.softDeleteUser(userId).subscribe({
       next: () => {
-        this.toast.success(`User #${userId} status updated.`);
+        this.toast.success(`User #${userId} ${action}d successfully.`);
         this.loadUsers();
       },
       error: (err) => {
