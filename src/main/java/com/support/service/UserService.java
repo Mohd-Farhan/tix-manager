@@ -1,15 +1,19 @@
 package com.support.service;
 
+import com.support.dto.BulkUploadHistoryDTO;
 import com.support.dto.BulkUploadResultDTO;
 import com.support.dto.CreateUserRequest;
 import com.support.dto.PasswordChangeDTO;
 import com.support.dto.UserDTO;
+import com.support.entity.BulkUploadHistory;
 import com.support.entity.User;
 import com.support.entity.UserRole;
 import com.support.exception.DuplicateResourceException;
 import com.support.exception.InvalidOperationException;
 import com.support.exception.ResourceNotFoundException;
+import com.support.mapper.BulkUploadHistoryMapper;
 import com.support.mapper.UserMapper;
+import com.support.repository.BulkUploadHistoryRepository;
 import com.support.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * ==============================================================================================
@@ -45,6 +50,13 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class UserService {
 
+    /**
+     * Password complexity: min 8 chars, 1 uppercase, 1 digit, 1 special character.
+     * Shared between single-user creation (via DTO @Pattern) and CSV bulk upload (programmatic check).
+     */
+    private static final Pattern PASSWORD_PATTERN =
+            Pattern.compile("^(?=.*[A-Z])(?=.*\\d)(?=.*[@#$!%*?&])[A-Za-z\\d@#$!%*?&]{8,}$");
+
     @Autowired
     private UserRepository userRepository;
 
@@ -56,6 +68,12 @@ public class UserService {
 
     @Autowired
     private AuditService auditService;
+
+    @Autowired
+    private BulkUploadHistoryRepository bulkUploadHistoryRepository;
+
+    @Autowired
+    private BulkUploadHistoryMapper bulkUploadHistoryMapper;
 
     @Transactional
     public UserDTO createUser(CreateUserRequest request, String currentUsername) {
@@ -181,6 +199,13 @@ public class UserService {
                     continue;
                 }
 
+                // Validate explicit passwords against complexity policy; defaults skip validation
+                if (!password.isEmpty() && !PASSWORD_PATTERN.matcher(password).matches()) {
+                    failureCount++;
+                    errors.add(String.format("Row %d (%s): Password does not meet complexity requirements (min 8 chars, 1 uppercase, 1 digit, 1 special).", lineNumber, username));
+                    continue;
+                }
+
                 String effectivePassword = password.isEmpty() ? username + "@123" : password;
 
                 User newUser = new User();
@@ -202,6 +227,32 @@ public class UserService {
 
         log.info("Bulk upload processed by '{}': totalRows={}, successCount={}, failureCount={}", currentUsername, totalRows, successCount, failureCount);
 
+        String status;
+        if (failureCount == 0) {
+            status = "SUCCESS";
+        } else if (successCount > 0) {
+            status = "PARTIAL_SUCCESS";
+        } else {
+            status = "FAILED";
+        }
+
+        String errorDetails = errors.isEmpty() ? null : String.join("\n", errors);
+        String fileName = (file.getOriginalFilename() != null && !file.getOriginalFilename().isBlank())
+                ? file.getOriginalFilename()
+                : "bulk_users.csv";
+
+        BulkUploadHistory history = BulkUploadHistory.builder()
+                .fileName(fileName)
+                .uploadedBy(currentUsername)
+                .totalRows(totalRows)
+                .successCount(successCount)
+                .failureCount(failureCount)
+                .status(status)
+                .errorDetails(errorDetails)
+                .build();
+
+        bulkUploadHistoryRepository.save(history);
+
         return BulkUploadResultDTO.builder()
                 .totalRows(totalRows)
                 .successCount(successCount)
@@ -210,24 +261,14 @@ public class UserService {
                 .build();
     }
 
-    @Transactional
-    public UserDTO registerUser(UserDTO dto) {
-        User user = userMapper.toEntity(dto);
-
-        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
-            throw new DuplicateResourceException("User", "username", user.getUsername());
-        }
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new DuplicateResourceException("User", "email", user.getEmail());
-        }
-
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        userRepository.save(user);
-        auditService.recordEntityChange("USER", user.getId(), "CREATE", user.getUsername(),
-                "User self-registered with role " + user.getRole());
-        log.info("User self-registered: username={}, role={}", user.getUsername(), user.getRole());
-        return userMapper.toDTO(user);
+    /**
+     * Retrieve immutable bulk upload history records.
+     */
+    public List<BulkUploadHistoryDTO> getBulkUploadHistory() {
+        List<BulkUploadHistory> records = bulkUploadHistoryRepository.findAllByOrderByCreatedAtDesc();
+        return bulkUploadHistoryMapper.toDTOList(records);
     }
+
 
     public UserDTO findByUsername(String username) {
         User user = userRepository.findByUsername(username)

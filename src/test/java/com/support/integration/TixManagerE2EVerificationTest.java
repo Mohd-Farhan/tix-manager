@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,7 +64,7 @@ public class TixManagerE2EVerificationTest {
         CreateUserRequest customerCreation = CreateUserRequest.builder()
                 .username("e2e_customer")
                 .email("e2e_customer@test.com")
-                .password("Password123")
+                .password("Password123!")
                 .role(UserRole.CUSTOMER)
                 .build();
 
@@ -81,7 +82,7 @@ public class TixManagerE2EVerificationTest {
         // --------------------------------------------------------------------------------------
         LoginDTO customerLogin = new LoginDTO();
         customerLogin.setUsername("e2e_customer");
-        customerLogin.setPassword("Password123");
+        customerLogin.setPassword("Password123!");
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -196,5 +197,50 @@ public class TixManagerE2EVerificationTest {
                 .andExpect(jsonPath("$[0].newStatus").value("OPEN"))
                 .andExpect(jsonPath("$[1].newStatus").value("IN_PROGRESS"))
                 .andExpect(jsonPath("$[2].newStatus").value("RESOLVED"));
+    }
+
+    @Test
+    @DisplayName("Bulk Upload & History Sign-Off: CSV upload records immutable audit history")
+    void testBulkUploadAndHistory_E2E() throws Exception {
+        LoginDTO adminLogin = new LoginDTO();
+        adminLogin.setUsername("admin");
+        adminLogin.setPassword("admin123");
+
+        MvcResult adminLoginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(adminLogin)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String adminJwt = objectMapper.readTree(adminLoginResult.getResponse().getContentAsString())
+                .get("token").asText();
+
+        // 1. Admin uploads CSV with 1 valid user and 1 invalid row
+        String csvContent = "username,email,password,role\n" +
+                "batch_user1,batch1@example.com,Pass123!,CUSTOMER\n" +
+                "bad_row,not-an-email,,CUSTOMER\n";
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "e2e_batch.csv", "text/csv", csvContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/users/bulk-upload")
+                        .file(file)
+                        .header("Authorization", "Bearer " + adminJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalRows").value(2))
+                .andExpect(jsonPath("$.successCount").value(1))
+                .andExpect(jsonPath("$.failureCount").value(1));
+
+        // 2. Admin queries history
+        mockMvc.perform(get("/api/users/bulk-upload/history")
+                        .header("Authorization", "Bearer " + adminJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].fileName").value("e2e_batch.csv"))
+                .andExpect(jsonPath("$[0].uploadedBy").value("admin"))
+                .andExpect(jsonPath("$[0].totalRows").value(2))
+                .andExpect(jsonPath("$[0].successCount").value(1))
+                .andExpect(jsonPath("$[0].failureCount").value(1))
+                .andExpect(jsonPath("$[0].status").value("PARTIAL_SUCCESS"))
+                .andExpect(jsonPath("$[0].errors.length()").value(1));
     }
 }

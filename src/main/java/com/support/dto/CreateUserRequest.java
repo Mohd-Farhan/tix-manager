@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,7 +29,15 @@ public class CreateUserRequest {
     @Schema(description = "Unique email address", example = "john@example.com")
     private String email;
 
-    @Schema(description = "Initial password. If left blank, defaults to '<username>@123'", example = "SecurePass123!")
+    /**
+     * Optional initial password. If blank, defaults to '<username>@123'.
+     * When provided, must satisfy complexity: min 8 chars, 1 uppercase, 1 digit, 1 special char.
+     */
+    @Pattern(
+            regexp = "^$|^(?=.*[A-Z])(?=.*\\d)(?=.*[@#$!%*?&])[A-Za-z\\d@#$!%*?&]{8,}$",
+            message = "Password must be at least 8 characters with 1 uppercase, 1 digit, and 1 special character (@#$!%*?&)"
+    )
+    @Schema(description = "Initial password. If left blank, defaults to '<username>@123'", example = "SecurePass1!")
     private String password;
 
     @NotNull(message = "Role must be specified")

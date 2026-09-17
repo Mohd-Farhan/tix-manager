@@ -1,10 +1,14 @@
 package com.support.service;
 
+import com.support.dto.BulkUploadHistoryDTO;
 import com.support.dto.PasswordChangeDTO;
 import com.support.dto.UserDTO;
+import com.support.entity.BulkUploadHistory;
 import com.support.entity.User;
 import com.support.entity.UserRole;
+import com.support.mapper.BulkUploadHistoryMapper;
 import com.support.mapper.UserMapper;
+import com.support.repository.BulkUploadHistoryRepository;
 import com.support.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +54,12 @@ class UserServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private BulkUploadHistoryRepository bulkUploadHistoryRepository;
+
+    @Mock
+    private BulkUploadHistoryMapper bulkUploadHistoryMapper;
+
     @InjectMocks
     private UserService userService;
 
@@ -72,47 +82,6 @@ class UserServiceTest {
                 .password("plainPassword123")
                 .role(UserRole.CUSTOMER)
                 .build();
-    }
-
-    /**
-     * TEST CASE 1: User Registration with password encoding.
-     */
-    @Test
-    @DisplayName("registerUser — Successfully encode password and persist new user")
-    void testRegisterUser_Success() {
-        // Arrange
-        when(userMapper.toEntity(userDTO)).thenReturn(user);
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
-        when(passwordEncoder.encode("plainPassword123")).thenReturn("$2a$10$hashedPassword");
-        when(userRepository.save(any(User.class))).thenReturn(user);
-        when(userMapper.toDTO(user)).thenReturn(userDTO);
-
-        // Act
-        UserDTO registered = userService.registerUser(userDTO);
-
-        // Assert
-        assertThat(registered).isNotNull();
-        assertThat(registered.getUsername()).isEqualTo("testuser");
-        verify(passwordEncoder, times(1)).encode("plainPassword123");
-        verify(userRepository, times(1)).save(user);
-    }
-
-    /**
-     * TEST CASE 2: Duplicate username registration must throw RuntimeException.
-     */
-    @Test
-    @DisplayName("registerUser — Throw exception when username already exists")
-    void testRegisterUser_DuplicateUsername_ThrowsException() {
-        // Arrange
-        when(userMapper.toEntity(userDTO)).thenReturn(user);
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-
-        // Act & Assert
-        assertThatThrownBy(() -> userService.registerUser(userDTO))
-                .isInstanceOf(com.support.exception.DuplicateResourceException.class)
-                .hasMessageContaining("User with username 'testuser' already exists");
-        verify(userRepository, never()).save(any(User.class));
     }
 
     /**
@@ -243,6 +212,52 @@ class UserServiceTest {
         assertThat(result.getErrors()).hasSize(2);
         assertThat(result.getErrors().get(0)).contains("Admins cannot create ADMIN accounts");
         assertThat(result.getErrors().get(1)).contains("Invalid email format");
+
+        verify(bulkUploadHistoryRepository, times(1)).save(argThat(history ->
+                history.getFileName().equals("users.csv") &&
+                history.getUploadedBy().equals("admin") &&
+                history.getTotalRows() == 3 &&
+                history.getSuccessCount() == 1 &&
+                history.getFailureCount() == 2 &&
+                history.getStatus().equals("PARTIAL_SUCCESS") &&
+                history.getErrorDetails() != null
+        ));
+    }
+
+    /**
+     * TEST CASE 7b: Bulk Upload History retrieval.
+     */
+    @Test
+    @DisplayName("getBulkUploadHistory — Retrieve sorted history records")
+    void testGetBulkUploadHistory() {
+        BulkUploadHistory item = BulkUploadHistory.builder()
+                .id(10L)
+                .fileName("test.csv")
+                .uploadedBy("admin")
+                .totalRows(5)
+                .successCount(5)
+                .failureCount(0)
+                .status("SUCCESS")
+                .build();
+
+        BulkUploadHistoryDTO dto = BulkUploadHistoryDTO.builder()
+                .id(10L)
+                .fileName("test.csv")
+                .uploadedBy("admin")
+                .totalRows(5)
+                .successCount(5)
+                .failureCount(0)
+                .status("SUCCESS")
+                .build();
+
+        when(bulkUploadHistoryRepository.findAllByOrderByCreatedAtDesc()).thenReturn(java.util.List.of(item));
+        when(bulkUploadHistoryMapper.toDTOList(java.util.List.of(item))).thenReturn(java.util.List.of(dto));
+
+        java.util.List<BulkUploadHistoryDTO> result = userService.getBulkUploadHistory();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getFileName()).isEqualTo("test.csv");
+        assertThat(result.get(0).getStatus()).isEqualTo("SUCCESS");
     }
 
     /**

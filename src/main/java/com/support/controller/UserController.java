@@ -1,5 +1,6 @@
 package com.support.controller;
 
+import com.support.dto.BulkUploadHistoryDTO;
 import com.support.dto.BulkUploadResultDTO;
 import com.support.dto.CreateUserRequest;
 import com.support.dto.PasswordChangeDTO;
@@ -72,6 +73,19 @@ public class UserController {
         log.info("REST: Admin '{}' initiated bulk user upload ({})", actor, file.getOriginalFilename());
         BulkUploadResultDTO result = userService.bulkUploadUsersCsv(file, actor);
         return ResponseEntity.ok(result);
+    }
+
+    @Operation(summary = "Get bulk upload history", description = "Retrieves immutable audit history records for all CSV bulk uploads. Requires ADMIN or SYSTEM_ADMIN role.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "List of bulk upload history records retrieved"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role")
+    })
+    @GetMapping("/bulk-upload/history")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<BulkUploadHistoryDTO>> getBulkUploadHistory() {
+        log.info("REST: Querying bulk upload history");
+        List<BulkUploadHistoryDTO> history = userService.getBulkUploadHistory();
+        return ResponseEntity.ok(history);
     }
 
 
