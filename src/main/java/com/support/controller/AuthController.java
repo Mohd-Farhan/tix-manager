@@ -5,6 +5,7 @@ import com.support.dto.LoginDTO;
 import com.support.dto.UserDTO;
 import com.support.mapper.UserMapper;
 import com.support.security.JwtService;
+import com.support.security.LoginRateLimiterService;
 import com.support.security.UserDetailsImpl;
 import com.support.service.AuditService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,6 +48,9 @@ public class AuthController {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private LoginRateLimiterService loginRateLimiterService;
+
     @Operation(summary = "Authenticate user credentials", description = "Validates username and password, then returns a signed stateless JWT token with user details.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Authenticated successfully, returns JWT"),
@@ -57,6 +61,11 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletRequest request) {
         log.info("Login attempt for user: {}", loginDTO.getUsername());
 
+        String clientIp = auditService.extractClientIp(request);
+
+        // Step 0: Pre-authentication brute-force rate limit evaluation (OWASP ASVS v4.0 §2.2.1)
+        loginRateLimiterService.checkBlocked(clientIp, loginDTO.getUsername());
+
         Authentication authentication;
         try {
             // Step 1: Authenticate the user's credentials against DaoAuthenticationProvider
@@ -65,12 +74,17 @@ public class AuthController {
                             loginDTO.getUsername(),
                             loginDTO.getPassword()));
         } catch (BadCredentialsException ex) {
+            loginRateLimiterService.recordFailure(clientIp, loginDTO.getUsername());
             auditService.recordLoginFailure(loginDTO.getUsername(), request, "BAD_CREDENTIALS");
             throw ex;
         } catch (Exception ex) {
+            loginRateLimiterService.recordFailure(clientIp, loginDTO.getUsername());
             auditService.recordLoginFailure(loginDTO.getUsername(), request, ex.getMessage());
             throw ex;
         }
+
+        // Authentication succeeded: clear rate-limiting failure tracking
+        loginRateLimiterService.recordSuccess(clientIp, loginDTO.getUsername());
 
         // Step 2: Extract authenticated user details
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();

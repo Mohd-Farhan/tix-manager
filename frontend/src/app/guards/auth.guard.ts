@@ -8,6 +8,10 @@ export const authGuard: CanActivateFn = () => {
   const router = inject(Router);
 
   if (authService.isAuthenticated()) {
+    if (authService.mustChangePassword()) {
+      router.navigate(['/auth/login'], { queryParams: { forcePasswordChange: 'true' } });
+      return false;
+    }
     return true;
   }
 
@@ -22,6 +26,11 @@ export const roleGuard = (allowedRoles: UserRole[]): CanActivateFn => {
 
     if (!authService.isAuthenticated()) {
       router.navigate(['/auth/login']);
+      return false;
+    }
+
+    if (authService.mustChangePassword()) {
+      router.navigate(['/auth/login'], { queryParams: { forcePasswordChange: 'true' } });
       return false;
     }
 

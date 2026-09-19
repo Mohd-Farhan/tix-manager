@@ -22,6 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import com.support.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -35,6 +36,13 @@ public class SecurityConfig {
 
     @Autowired
     private UserDetailsService userDetailsService;
+
+    /**
+     * OWASP / SOC2: Externalized allowed origins preventing unauthorized Cross-Origin requests.
+     * Can be set via environment variable CORS_ALLOWED_ORIGINS=https://app.tixmanager.com in production.
+     */
+    @Value("${cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
+    private String allowedOrigins;
 
     @Bean
     public RoleHierarchy roleHierarchy() {
@@ -91,13 +99,12 @@ public class SecurityConfig {
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
         
-        // ==============================================================================================
-        // DEPLOYMENT REMINDER (Phase 2):
-        // Before deploying to production (e.g. Render / Vercel):
-        // 1. Replace localhost wildcard patterns with the explicit production domain (e.g. https://tixmanager.vercel.app).
-        // 2. Alternatively, externalize allowed origins to environment variable (e.g. ${CORS_ALLOWED_ORIGINS:http://localhost:4200}).
-        // ==============================================================================================
-        configuration.setAllowedOriginPatterns(java.util.List.of("http://localhost:*", "http://127.0.0.1:*"));
+        // OWASP CORS Configuration: Dynamically parse externalized origin patterns
+        java.util.List<String> origins = java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(java.util.List.of("*"));
         configuration.setExposedHeaders(java.util.List.of("X-Correlation-ID"));

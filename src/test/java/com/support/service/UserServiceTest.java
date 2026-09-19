@@ -60,6 +60,9 @@ class UserServiceTest {
     @Mock
     private BulkUploadHistoryMapper bulkUploadHistoryMapper;
 
+    @Mock
+    private EmailService emailService;
+
     @InjectMocks
     private UserService userService;
 
@@ -98,12 +101,14 @@ class UserServiceTest {
         when(passwordEncoder.encode("newSecret456")).thenReturn("$2a$10$newHashedPassword");
 
         // Act
+        user.setMustChangePassword(true);
         userService.updatePassword(1L, changeDTO);
 
         // Assert
         verify(passwordEncoder, times(1)).matches("oldPassword123", "$2a$10$encodedOldPassword");
         verify(passwordEncoder, times(1)).encode("newSecret456");
         verify(userRepository, times(1)).save(user);
+        assertThat(user.isMustChangePassword()).isFalse();
     }
 
     /**
@@ -261,6 +266,39 @@ class UserServiceTest {
     }
 
     /**
+     * TEST CASE 7c: Bulk CSV Upload sanitizes formula injection characters (OWASP CWE-1236).
+     */
+    @Test
+    @DisplayName("bulkUploadUsersCsv — Strips formula injection prefixes (=, +, -, @) per OWASP CWE-1236")
+    void testBulkUploadUsersCsv_FormulaInjectionSanitized() {
+        User adminCaller = new User();
+        adminCaller.setId(2L);
+        adminCaller.setUsername("admin");
+        adminCaller.setRole(UserRole.ADMIN);
+
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(adminCaller));
+        when(userRepository.findByUsername("clean_agent")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("clean@test.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$hashed");
+
+        // Username has '=clean_agent' formula prefix, email has '+clean@test.com' formula prefix
+        String csvData = "username,email,password,role\n" +
+                "=clean_agent,+clean@test.com,Pass123!,SUPPORT_AGENT\n";
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "formula_test.csv", "text/csv", csvData.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        com.support.dto.BulkUploadResultDTO result = userService.bulkUploadUsersCsv(file, "admin");
+
+        assertThat(result.getSuccessCount()).isEqualTo(1);
+        verify(userRepository, times(1)).save(argThat(u ->
+                u.getUsername().equals("clean_agent") &&
+                u.getEmail().equals("clean@test.com") &&
+                u.isMustChangePassword()
+        ));
+    }
+
+    /**
      * TEST CASE 8: Soft Delete Hierarchy — Admin cannot deactivate another Admin.
      */
     @Test
@@ -302,5 +340,71 @@ class UserServiceTest {
                 .isInstanceOf(com.support.exception.InvalidOperationException.class)
                 .hasMessageContaining("You cannot deactivate your own account");
     }
+
+    /**
+     * TEST CASE 10: Pagination — Retrieve paginated users.
+     */
+    @Test
+    @DisplayName("getAllUsers(Pageable) — Returns paginated UserDTO slice")
+    void testGetAllUsersPaged() {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        org.springframework.data.domain.Page<User> userPage = new org.springframework.data.domain.PageImpl<>(java.util.List.of(user));
+
+        when(userRepository.findAll(pageable)).thenReturn(userPage);
+        when(userMapper.toDTO(user)).thenReturn(UserDTO.builder().id(1L).username("testuser").build());
+
+        org.springframework.data.domain.Page<UserDTO> result = userService.getAllUsers(pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getUsername()).isEqualTo("testuser");
+    }
+
+    /**
+     * TEST CASE 11: Pagination — Retrieve paginated users including deleted.
+     */
+    @Test
+    @DisplayName("getAllUsersIncludingDeleted(Pageable) — Returns paginated UserDTO slice including soft-deleted")
+    void testGetAllUsersIncludingDeletedPaged() {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("deleted_user");
+        user.setDeleted(true);
+        org.springframework.data.domain.Page<User> userPage = new org.springframework.data.domain.PageImpl<>(java.util.List.of(user));
+
+        when(userRepository.findAllIncludingDeleted(pageable)).thenReturn(userPage);
+        when(userMapper.toDTO(user)).thenReturn(UserDTO.builder().id(1L).username("deleted_user").build());
+
+        org.springframework.data.domain.Page<UserDTO> result = userService.getAllUsersIncludingDeleted(pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getUsername()).isEqualTo("deleted_user");
+    }
+
+    /**
+     * TEST CASE 12: Pagination — Retrieve paginated bulk upload history.
+     */
+    @Test
+    @DisplayName("getBulkUploadHistory(Pageable) — Returns paginated BulkUploadHistoryDTO slice")
+    void testGetBulkUploadHistoryPaged() {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        BulkUploadHistory history = BulkUploadHistory.builder()
+                .fileName("users.csv")
+                .totalRows(50)
+                .build();
+        org.springframework.data.domain.Page<BulkUploadHistory> historyPage = new org.springframework.data.domain.PageImpl<>(java.util.List.of(history));
+
+        when(bulkUploadHistoryRepository.findAllByOrderByCreatedAtDesc(pageable)).thenReturn(historyPage);
+        when(bulkUploadHistoryMapper.toDTO(history)).thenReturn(BulkUploadHistoryDTO.builder().fileName("users.csv").totalRows(50).build());
+
+        org.springframework.data.domain.Page<BulkUploadHistoryDTO> result = userService.getBulkUploadHistory(pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getFileName()).isEqualTo("users.csv");
+    }
 }
+
 

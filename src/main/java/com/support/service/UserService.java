@@ -75,6 +75,9 @@ public class UserService {
     @Autowired
     private BulkUploadHistoryMapper bulkUploadHistoryMapper;
 
+    @Autowired
+    private EmailService emailService;
+
     @Transactional
     public UserDTO createUser(CreateUserRequest request, String currentUsername) {
         User caller = userRepository.findByUsername(currentUsername)
@@ -105,10 +108,14 @@ public class UserService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setRole(request.getRole());
+        // NIST SP 800-63B §5.1.1.2: Admin-provisioned accounts must personalize credentials on first login
+        user.setMustChangePassword(true);
 
         userRepository.save(user);
         auditService.recordEntityChange("USER", user.getId(), "CREATE", currentUsername,
                 "Created user '" + user.getUsername() + "' with role " + user.getRole());
+        // Enterprise Operations: Asynchronously notify user with temporary credentials
+        emailService.sendWelcomeEmail(user.getEmail(), user.getUsername(), rawPassword);
         log.info("User created: username={}, role={}, createdBy={}", user.getUsername(), user.getRole(), currentUsername);
         return userMapper.toDTO(user);
     }
@@ -153,10 +160,11 @@ public class UserService {
                     continue;
                 }
 
-                String username = tokens[0].trim();
-                String email = tokens[1].trim();
+                // OWASP CWE-1236: Neutralize formula injection prefixes (=, +, -, @, \t, \r)
+                String username = sanitizeCsvFormula(tokens[0].trim());
+                String email = sanitizeCsvFormula(tokens[1].trim());
                 String password = tokens.length > 2 ? tokens[2].trim() : "";
-                String roleStr = tokens.length > 3 ? tokens[3].trim() : "CUSTOMER";
+                String roleStr = tokens.length > 3 ? sanitizeCsvFormula(tokens[3].trim()) : "CUSTOMER";
 
                 if (username.length() < 3) {
                     failureCount++;
@@ -213,10 +221,14 @@ public class UserService {
                 newUser.setEmail(email);
                 newUser.setPassword(passwordEncoder.encode(effectivePassword));
                 newUser.setRole(role);
+                // NIST SP 800-63B §5.1.1.2: Bulk-imported accounts must personalize credentials on first login
+                newUser.setMustChangePassword(true);
 
                 userRepository.save(newUser);
                 auditService.recordEntityChange("USER", newUser.getId(), "CREATE", currentUsername,
                         "Created user '" + newUser.getUsername() + "' via CSV bulk upload with role " + newUser.getRole());
+                // Enterprise Operations: Asynchronously notify user with temporary credentials
+                emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getUsername(), effectivePassword);
                 batchUsernames.add(username.toLowerCase());
                 batchEmails.add(email.toLowerCase());
                 successCount++;
@@ -269,6 +281,14 @@ public class UserService {
         return bulkUploadHistoryMapper.toDTOList(records);
     }
 
+    /**
+     * Retrieve paginated immutable bulk upload history records for high-volume audit logs.
+     */
+    public Page<BulkUploadHistoryDTO> getBulkUploadHistory(Pageable pageable) {
+        return bulkUploadHistoryRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(bulkUploadHistoryMapper::toDTO);
+    }
+
 
     public UserDTO findByUsername(String username) {
         User user = userRepository.findByUsername(username)
@@ -293,6 +313,7 @@ public class UserService {
 
         if (dto.getPassword() != null) {
             existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
+            existingUser.setMustChangePassword(false);
         }
 
         userRepository.save(existingUser);
@@ -312,6 +333,8 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        // Password personalized: clear first-time change enforcement
+        user.setMustChangePassword(false);
         userRepository.save(user);
         auditService.recordEntityChange("USER", user.getId(), "UPDATE_PASSWORD", user.getUsername(),
                 "Password updated for user '" + user.getUsername() + "'");
@@ -370,5 +393,29 @@ public class UserService {
     public List<UserDTO> getAllUsersIncludingDeleted() {
         List<User> users = userRepository.findAllIncludingDeleted();
         return userMapper.toDTOList(users);
+    }
+
+    /**
+     * Retrieves paginated users including soft-deleted accounts for administrative audits.
+     */
+    public Page<UserDTO> getAllUsersIncludingDeleted(Pageable pageable) {
+        return userRepository.findAllIncludingDeleted(pageable).map(userMapper::toDTO);
+    }
+
+    /**
+     * OWASP CWE-1236: Defense-in-depth against CSV / Spreadsheet Formula Injection.
+     * Prevents execution of malicious formulas (=, +, -, @, \t, \r) if user records
+     * are subsequently exported to spreadsheet software (Excel, LibreOffice).
+     */
+    private String sanitizeCsvFormula(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        char first = input.charAt(0);
+        if (first == '=' || first == '+' || first == '-' || first == '@' || first == '\t' || first == '\r') {
+            // Neutralize by stripping leading formula control characters
+            return input.replaceFirst("^[=+\\-@\\t\\r]+", "");
+        }
+        return input;
     }
 }

@@ -12,6 +12,7 @@ export interface User {
   role: UserRole;
   deleted?: boolean;
   status?: 'active' | 'inactive';
+  mustChangePassword?: boolean;
   createdAt?: string;
 }
 

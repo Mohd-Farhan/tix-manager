@@ -1,6 +1,7 @@
 package com.support.config;
 
 import com.support.dto.ErrorResponse;
+import com.support.exception.AccountLockedException;
 import com.support.exception.DuplicateResourceException;
 import com.support.exception.InvalidOperationException;
 import com.support.exception.ResourceNotFoundException;
@@ -123,6 +124,24 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * HANDLER: AccountLockedException (OWASP ASVS v4.0 Anti-Brute-Force Lockout)
+     * HTTP STATUS: 429 Too Many Requests
+     * WHY: Returns RFC 6585 status code when client IP or username exceeds failed attempt thresholds.
+     */
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountLocked(AccountLockedException ex, HttpServletRequest request) {
+        log.warn("Rate limit lockout triggered on path [{}]: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.TOO_MANY_REQUESTS.value())
+                .error("Too Many Requests")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
     }
 
     /**

@@ -32,6 +32,7 @@ public class UserDTO {
     private UserRole role;
 
     private boolean deleted;
+    private boolean mustChangePassword;
 
     private LocalDateTime createdAt;
 

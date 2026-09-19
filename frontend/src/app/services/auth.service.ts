@@ -25,6 +25,7 @@ export class AuthService {
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = computed(() => !!this.currentUserSignal() && !!this.getToken());
   readonly userRole = computed(() => this.currentUserSignal()?.role ?? null);
+  readonly mustChangePassword = computed(() => !!this.currentUserSignal()?.mustChangePassword);
 
   private getStoredUser(): User | null {
     const raw = localStorage.getItem(this.userKey);
@@ -66,5 +67,14 @@ export class AuthService {
 
   hasRole(role: UserRole): boolean {
     return this.currentUserSignal()?.role === role;
+  }
+
+  updateCurrentUser(partial: Partial<User>): void {
+    const current = this.currentUserSignal();
+    if (current) {
+      const updated = { ...current, ...partial };
+      localStorage.setItem(this.userKey, JSON.stringify(updated));
+      this.currentUserSignal.set(updated);
+    }
   }
 }

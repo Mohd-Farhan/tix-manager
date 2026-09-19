@@ -65,6 +65,9 @@ class AuthControllerTest {
     @MockBean
     private com.support.service.AuditService auditService;
 
+    @MockBean
+    private com.support.security.LoginRateLimiterService loginRateLimiterService;
+
 
     /**
      * TEST CASE 3: Successful Login returns 200 OK and JWT Token.
@@ -119,7 +122,28 @@ class AuthControllerTest {
     }
 
     /**
-     * TEST CASE 5: Logout returns 200 OK.
+     * TEST CASE 5: Login when rate limited returns 429 Too Many Requests.
+     */
+    @Test
+    @DisplayName("POST /api/auth/login — Return 429 TOO_MANY_REQUESTS when account is locked")
+    void testLogin_AccountLocked() throws Exception {
+        LoginDTO loginDTO = new LoginDTO();
+        loginDTO.setUsername("admin");
+        loginDTO.setPassword("password");
+
+        org.mockito.Mockito.doThrow(new com.support.exception.AccountLockedException("Account temporarily locked", 15))
+                .when(loginRateLimiterService).checkBlocked(any(), any());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginDTO)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.message").value("Account temporarily locked"));
+    }
+
+    /**
+     * TEST CASE 6: Logout returns 200 OK.
      */
     @Test
     @DisplayName("POST /api/auth/logout — Return 200 OK")

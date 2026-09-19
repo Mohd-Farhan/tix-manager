@@ -12,14 +12,19 @@ import lombok.*;
  * ==============================================================================================
  * 
  * WHY THIS DATABASE DESIGN:
- * - Unique columns `username` and `email` have `@Column(unique = true)`, which
- * automatically creates
- * unique B-Tree indexes at the database level.
- * - Redundant table-level index annotations were removed to avoid duplicate
- * index maintenance overhead.
+ * - Unique columns `username` and `email` have `@Column(unique = true)`, which automatically creates
+ *   unique B-Tree indexes at the database level.
+ * - Performance indexes added:
+ *   - `idx_user_role`: Speeds up agent roster lookups and role-based filtering (`findByRole`).
+ *   - `idx_user_deleted`: Optimizes `@SQLRestriction("deleted = false")` on every user query.
+ *   - `idx_user_created_at`: Eliminates table sorting overhead for paginated user views.
  */
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+        @Index(name = "idx_user_role", columnList = "role"),
+        @Index(name = "idx_user_deleted", columnList = "deleted"),
+        @Index(name = "idx_user_created_at", columnList = "created_at DESC")
+})
 @Data
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
@@ -51,4 +56,24 @@ public class User extends Auditable {
 
     @Column(nullable = false)
     private boolean deleted = false;
+
+    /**
+     * ==============================================================================================
+     * NIST SP 800-63B §5.1.1.2 & SOC2 CC6.1 COMPLIANCE: Initial Credential Lifecycle
+     * ==============================================================================================
+     * 
+     * WHY THIS IS USED:
+     * 1. Protection Against Known Default Passwords:
+     *    - When administrators provision accounts or import users via bulk CSV, accounts are
+     *      initialized with temporary/shared credentials (e.g. `username@123`).
+     *    - Flagging `mustChangePassword = true` ensures these predictable credentials cannot be
+     *      exploited for unauthorized access beyond the initial login session.
+     * 
+     * 2. Mandatory First-Login Remediation:
+     *    - The application layer intercepts authentication and forces the user to provide an
+     *      explicit, compliant personal password before granting access to operational dashboards.
+     *    - Successfully updating the password resets this flag to `false`.
+     */
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword = false;
 }
