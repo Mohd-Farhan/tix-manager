@@ -4,6 +4,14 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { User, BulkUploadResult, BulkUploadHistoryItem } from '../models/user.model';
 
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -23,6 +31,10 @@ export class UserService {
     return this.http.get<User[]>(`${this.apiUrl}/admin/all`);
   }
 
+  getAllUsersAdminPaged(page: number = 0, size: number = 20, sort: string = 'createdAt,desc'): Observable<PageResponse<User>> {
+    return this.http.get<PageResponse<User>>(`${this.apiUrl}/admin/paged?page=${page}&size=${size}&sort=${sort}`);
+  }
+
   createUser(data: { username: string; email: string; password?: string; role: string }): Observable<User> {
     return this.http.post<User>(this.apiUrl, data);
   }
@@ -35,6 +47,10 @@ export class UserService {
 
   getBulkUploadHistory(): Observable<BulkUploadHistoryItem[]> {
     return this.http.get<BulkUploadHistoryItem[]>(`${this.apiUrl}/bulk-upload/history`);
+  }
+
+  getBulkUploadHistoryPaged(page: number = 0, size: number = 20, sort: string = 'createdAt,desc'): Observable<PageResponse<BulkUploadHistoryItem>> {
+    return this.http.get<PageResponse<BulkUploadHistoryItem>>(`${this.apiUrl}/bulk-upload/history/paged?page=${page}&size=${size}&sort=${sort}`);
   }
 
   updatePassword(userId: number, currentPassword: string, newPassword: string): Observable<void> {
@@ -52,4 +68,3 @@ export class UserService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 }
-

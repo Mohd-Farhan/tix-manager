@@ -33,6 +33,41 @@ export class UserManagementComponent implements OnInit {
   showBulkModal = false;
   isLoading = true;
 
+  // Pagination state
+  currentPage = 1;
+  pageSize = 10;
+  readonly pageSizeOptions = [10, 20, 50, 100];
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredUsers.length / this.pageSize));
+  }
+
+  get paginatedUsers(): User[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredUsers.slice(start, start + this.pageSize);
+  }
+
+  get startItemIndex(): number {
+    if (this.filteredUsers.length === 0) return 0;
+    return (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  get endItemIndex(): number {
+    return Math.min(this.currentPage * this.pageSize, this.filteredUsers.length);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.cdr.detectChanges();
+    }
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.cdr.detectChanges();
+  }
+
   // Add user form
   newUsername = '';
   newEmail = '';
@@ -120,6 +155,7 @@ export class UserManagementComponent implements OnInit {
       result = result.filter((u) => u.role === this.roleFilter);
     }
     this.filteredUsers = result;
+    this.currentPage = 1;
   }
 
   openAddUserModal(): void {

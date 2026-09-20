@@ -22,6 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+
 import java.util.List;
 
 /**
@@ -85,6 +91,22 @@ public class UserController {
     public ResponseEntity<List<BulkUploadHistoryDTO>> getBulkUploadHistory() {
         log.info("REST: Querying bulk upload history");
         List<BulkUploadHistoryDTO> history = userService.getBulkUploadHistory();
+        return ResponseEntity.ok(history);
+    }
+
+    @Operation(summary = "Get paginated bulk upload history", description = "Retrieves paginated immutable audit history records for bulk uploads. Requires ADMIN or SYSTEM_ADMIN role.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Page of bulk upload history records retrieved"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role")
+    })
+    @GetMapping("/bulk-upload/history/paged")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<BulkUploadHistoryDTO>> getBulkUploadHistoryPaged(
+            @ParameterObject
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        log.info("REST: Querying paginated bulk upload history");
+        Page<BulkUploadHistoryDTO> history = userService.getBulkUploadHistory(pageable);
         return ResponseEntity.ok(history);
     }
 
@@ -173,6 +195,36 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserDTO>> getAllUsersIncludingDeleted() {
         List<UserDTO> users = userService.getAllUsersIncludingDeleted();
+        return ResponseEntity.ok(users);
+    }
+
+    @Operation(summary = "Get paginated active users", description = "Returns pageable active users with configurable page size, number, and sort order.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Page of active users retrieved"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN role")
+    })
+    @GetMapping("/paged")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<UserDTO>> getAllUsersPaged(
+            @ParameterObject
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        Page<UserDTO> users = userService.getAllUsers(pageable);
+        return ResponseEntity.ok(users);
+    }
+
+    @Operation(summary = "Get paginated users including deleted", description = "Administrative query to audit all users with pagination. Admin only.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Page of all users retrieved"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN role")
+    })
+    @GetMapping("/admin/paged")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<UserDTO>> getAllUsersIncludingDeletedPaged(
+            @ParameterObject
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        Page<UserDTO> users = userService.getAllUsersIncludingDeleted(pageable);
         return ResponseEntity.ok(users);
     }
 }

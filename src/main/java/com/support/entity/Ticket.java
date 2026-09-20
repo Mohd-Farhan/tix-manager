@@ -41,7 +41,8 @@ import lombok.*;
 @Table(name = "tickets", indexes = {
         @Index(name = "idx_ticket_customer", columnList = "customer_id"),
         @Index(name = "idx_ticket_agent", columnList = "agent_id"),
-        @Index(name = "idx_ticket_status", columnList = "status")
+        @Index(name = "idx_ticket_status", columnList = "status"),
+        @Index(name = "idx_ticket_created_at", columnList = "created_at DESC")
 })
 @Data
 @EqualsAndHashCode(callSuper = false)
