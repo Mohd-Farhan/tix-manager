@@ -65,6 +65,9 @@ class TicketServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private EmailService emailService;
+
     @InjectMocks
     private TicketService ticketService;
 
