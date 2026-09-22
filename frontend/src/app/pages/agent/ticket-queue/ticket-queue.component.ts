@@ -6,11 +6,12 @@ import { Subscription } from 'rxjs';
 import { TicketService } from '../../../services/ticket.service';
 import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
+import { PaginationComponent, PageSizeOption } from '../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-agent-ticket-queue',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, PaginationComponent],
   templateUrl: './ticket-queue.component.html',
   styleUrl: './ticket-queue.component.css'
 })
@@ -32,6 +33,28 @@ export class TicketQueueComponent implements OnInit, OnDestroy {
   statusFilter = 'ALL'; // ALL, OPEN, IN_PROGRESS, RESOLVED
   assignmentFilter = 'ALL'; // ALL, UNASSIGNED, ASSIGNED_TO_ME
   sortBy = 'newest';
+
+  // Pagination state
+  currentPage = 1;
+  pageSize: PageSizeOption = 10;
+  readonly pageSizeOptions: PageSizeOption[] = [10, 20, 50, 100, 'ALL'];
+
+  get paginatedTickets(): Ticket[] {
+    if (this.pageSize === 'ALL') return this.filteredTickets;
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredTickets.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    this.cdr.detectChanges();
+  }
+
+  onPageSizeChange(size: PageSizeOption): void {
+    this.pageSize = size;
+    this.currentPage = 1;
+    this.cdr.detectChanges();
+  }
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
@@ -157,6 +180,7 @@ export class TicketQueueComponent implements OnInit, OnDestroy {
     });
 
     this.filteredTickets = result;
+    this.currentPage = 1;
   }
 
   private getPriorityWeight(priority: TicketPriority): number {

@@ -99,24 +99,13 @@
   </div>
 
   <!-- Pagination -->
-  @if (totalPages > 1) {
-  <div class="pagination">
-    <button class="page-btn" (click)="prevPage()" [disabled]="page <= 1" id="page-prev">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="15 18 9 12 15 6"/>
-      </svg>
-      Previous
-    </button>
-    <span class="page-info">Page {{ page }} of {{ totalPages }}</span>
-    <button class="page-btn" (click)="nextPage()" [disabled]="page >= totalPages" id="page-next">
-      Next
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="9 18 15 12 9 6"/>
-      </svg>
-    </button>
-  </div>
-  }
+  <app-pagination
+    [currentPage]="currentPage"
+    [pageSize]="pageSize"
+    [totalItems]="filteredTickets.length"
+    [pageSizeOptions]="pageSizeOptions"
+    itemLabel="tickets"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)" />
   }
 </div>

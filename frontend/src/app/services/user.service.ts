@@ -4,13 +4,8 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { User, BulkUploadResult, BulkUploadHistoryItem } from '../models/user.model';
 
-export interface PageResponse<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-}
+import { PageResponse } from '../models/page.model';
+export type { PageResponse };
 
 @Injectable({
   providedIn: 'root',

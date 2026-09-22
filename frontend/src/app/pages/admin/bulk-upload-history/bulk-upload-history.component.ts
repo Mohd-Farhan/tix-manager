@@ -8,6 +8,7 @@ import { ToastService } from '../../../services/toast.service';
 import { SearchBoxComponent } from '../../../shared/components/search-box/search-box.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ModalShellComponent } from '../../../shared/components/modal-shell/modal-shell.component';
+import { PaginationComponent, PageSizeOption } from '../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-bulk-upload-history',
@@ -18,7 +19,8 @@ import { ModalShellComponent } from '../../../shared/components/modal-shell/moda
     RouterLink,
     SearchBoxComponent,
     EmptyStateComponent,
-    ModalShellComponent
+    ModalShellComponent,
+    PaginationComponent
   ],
   templateUrl: './bulk-upload-history.component.html',
   styleUrl: './bulk-upload-history.component.css'
@@ -31,6 +33,28 @@ export class BulkUploadHistoryComponent implements OnInit {
   historyItems: BulkUploadHistoryItem[] = [];
   filteredItems: BulkUploadHistoryItem[] = [];
   isLoading = false;
+
+  // Pagination state
+  currentPage = 1;
+  pageSize: PageSizeOption = 10;
+  readonly pageSizeOptions: PageSizeOption[] = [10, 20, 50, 100, 'ALL'];
+
+  get paginatedItems(): BulkUploadHistoryItem[] {
+    if (this.pageSize === 'ALL') return this.filteredItems;
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredItems.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    this.cdr.detectChanges();
+  }
+
+  onPageSizeChange(size: PageSizeOption): void {
+    this.pageSize = size;
+    this.currentPage = 1;
+    this.cdr.detectChanges();
+  }
 
   // Filter & search
   searchTerm = '';
@@ -82,6 +106,7 @@ export class BulkUploadHistoryComponent implements OnInit {
 
       return matchesSearch && matchesStatus;
     });
+    this.currentPage = 1;
   }
 
   onSearch(term: string): void {

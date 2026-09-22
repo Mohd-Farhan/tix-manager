@@ -6,11 +6,12 @@ import { Subscription } from 'rxjs';
 import { TicketService } from '../../../services/ticket.service';
 import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
+import { PaginationComponent, PageSizeOption } from '../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-ticket-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, PaginationComponent],
   templateUrl: './ticket-list.component.html',
   styleUrl: './ticket-list.component.css',
 })
@@ -46,8 +47,20 @@ export class TicketListComponent implements OnInit, OnDestroy {
   ];
 
   /* Pagination */
-  page = 1;
-  pageSize = 5;
+  currentPage = 1;
+  pageSize: PageSizeOption = 10;
+  readonly pageSizeOptions: PageSizeOption[] = [5, 10, 20, 50, 'ALL'];
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    this.cdr.detectChanges();
+  }
+
+  onPageSizeChange(size: PageSizeOption): void {
+    this.pageSize = size;
+    this.currentPage = 1;
+    this.cdr.detectChanges();
+  }
 
   ngOnInit(): void {
     this.loadTickets();
@@ -93,13 +106,13 @@ export class TicketListComponent implements OnInit, OnDestroy {
   }
 
   onSearch(): void {
-    this.page = 1;
+    this.currentPage = 1;
     this.applyFilters();
   }
 
   setFilter(key: string): void {
     this.activeFilter = key;
-    this.page = 1;
+    this.currentPage = 1;
     this.applyFilters();
   }
 
@@ -113,7 +126,7 @@ export class TicketListComponent implements OnInit, OnDestroy {
     if (val !== 'custom') {
       this.customStartDate = '';
       this.customEndDate = '';
-      this.page = 1;
+      this.currentPage = 1;
       this.applyFilters();
     }
   }
@@ -121,7 +134,7 @@ export class TicketListComponent implements OnInit, OnDestroy {
   onCustomDateChange(): void {
     // Only apply if both are set (or handle partial, but usually better when both are selected or cleared)
     if ((this.customStartDate && this.customEndDate) || (!this.customStartDate && !this.customEndDate)) {
-       this.page = 1;
+       this.currentPage = 1;
        this.applyFilters();
     }
   }
@@ -172,23 +185,13 @@ export class TicketListComponent implements OnInit, OnDestroy {
     }
 
     this.filteredTickets = result;
+    this.currentPage = 1;
   }
 
   get pagedTickets(): Ticket[] {
-    const start = (this.page - 1) * this.pageSize;
+    if (this.pageSize === 'ALL') return this.filteredTickets;
+    const start = (this.currentPage - 1) * this.pageSize;
     return this.filteredTickets.slice(start, start + this.pageSize);
-  }
-
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredTickets.length / this.pageSize));
-  }
-
-  prevPage(): void {
-    if (this.page > 1) this.page--;
-  }
-
-  nextPage(): void {
-    if (this.page < this.totalPages) this.page++;
   }
 
   getStatusClass(status: TicketStatus): string {

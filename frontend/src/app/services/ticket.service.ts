@@ -4,6 +4,7 @@ import { Observable, Subject, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Ticket, TicketPriority, TicketStatus, TicketStatusHistory } from '../models/ticket.model';
 import { Message } from '../models/message.model';
+import { PageResponse } from '../models/page.model';
 
 @Injectable({
   providedIn: 'root',
@@ -44,8 +45,16 @@ export class TicketService {
     return this.http.get<Ticket[]>(`${this.apiUrl}/user/${userId}`);
   }
 
+  getTicketsForUserPaged(userId: number, page: number = 0, size: number = 20, sort: string = 'createdAt,desc'): Observable<PageResponse<Ticket>> {
+    return this.http.get<PageResponse<Ticket>>(`${this.apiUrl}/user/${userId}/paged?page=${page}&size=${size}&sort=${sort}`);
+  }
+
   getAllTickets(): Observable<Ticket[]> {
     return this.http.get<Ticket[]>(this.apiUrl);
+  }
+
+  getAllTicketsPaged(page: number = 0, size: number = 20, sort: string = 'createdAt,desc'): Observable<PageResponse<Ticket>> {
+    return this.http.get<PageResponse<Ticket>>(`${this.apiUrl}/paged?page=${page}&size=${size}&sort=${sort}`);
   }
 
   getTicketById(id: number): Observable<Ticket> {

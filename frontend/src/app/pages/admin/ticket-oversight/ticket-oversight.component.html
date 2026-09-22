@@ -69,7 +69,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (ticket of filteredTickets; track ticket.id) {
+        @for (ticket of paginatedTickets; track ticket.id) {
         <tr class="ticket-row">
           <td class="col-id">#{{ ticket.id }}</td>
           <td class="col-title"><div class="title-text">{{ ticket.title }}</div></td>
@@ -112,6 +112,14 @@
         }
       </tbody>
     </table>
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalItems]="filteredTickets.length"
+      [pageSizeOptions]="pageSizeOptions"
+      itemLabel="tickets"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
     }
   </div>
 

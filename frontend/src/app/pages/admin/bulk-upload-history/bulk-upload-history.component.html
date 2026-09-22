@@ -140,7 +140,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of filteredItems; track item.id) {
+          @for (item of paginatedItems; track item.id) {
             <tr class="history-row">
               <td class="col-id font-mono">#{{ item.id }}</td>
               <td class="col-date">
@@ -203,6 +203,14 @@
           }
         </tbody>
       </table>
+      <app-pagination
+        [currentPage]="currentPage"
+        [pageSize]="pageSize"
+        [totalItems]="filteredItems.length"
+        [pageSizeOptions]="pageSizeOptions"
+        itemLabel="batches"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)" />
     }
   </div>
 

@@ -1,0 +1,58 @@
+<div class="pagination-bar" role="navigation" aria-label="Pagination Navigation">
+  <div class="pagination-info">
+    @if (totalItems === 0) {
+      <span>No {{ itemLabel }} found</span>
+    } @else {
+      <span>Showing <strong>{{ startItemIndex }}</strong> to <strong>{{ endItemIndex }}</strong> of <strong>{{ totalItems }}</strong> {{ itemLabel }}</span>
+    }
+  </div>
+
+  <div class="pagination-controls">
+    @if (pageSizeOptions.length > 0) {
+      <div class="page-size-selector">
+        <label for="page-size-select">Rows per page:</label>
+        <select
+          id="page-size-select"
+          class="page-size-select"
+          [ngModel]="pageSize"
+          (ngModelChange)="onSelectPageSize($event)">
+          @for (option of pageSizeOptions; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <div class="page-nav-group">
+      <span class="page-counter">
+        Page <strong>{{ currentPage }}</strong> of <strong>{{ totalPages }}</strong>
+      </span>
+
+      <button
+        type="button"
+        class="btn-page-nav"
+        (click)="prevPage()"
+        [disabled]="currentPage <= 1 || totalItems === 0"
+        title="Previous Page"
+        aria-label="Previous Page">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        <span>Prev</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn-page-nav"
+        (click)="nextPage()"
+        [disabled]="currentPage >= totalPages || totalItems === 0"
+        title="Next Page"
+        aria-label="Next Page">
+        <span>Next</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>

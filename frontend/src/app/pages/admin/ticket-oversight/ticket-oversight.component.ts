@@ -11,12 +11,13 @@ import { PriorityBadgeComponent } from '../../../shared/components/priority-badg
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { SearchBoxComponent } from '../../../shared/components/search-box/search-box.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { PaginationComponent, PageSizeOption } from '../../../shared/components/pagination/pagination.component';
 import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-admin-ticket-oversight',
   standalone: true,
-  imports: [CommonModule, FormsModule, StatusBadgeComponent, PriorityBadgeComponent, EmptyStateComponent, SearchBoxComponent, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, StatusBadgeComponent, PriorityBadgeComponent, EmptyStateComponent, SearchBoxComponent, ConfirmDialogComponent, PaginationComponent],
   templateUrl: './ticket-oversight.component.html',
   styleUrl: './ticket-oversight.component.css',
 })
@@ -37,6 +38,28 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
   priorityFilter = 'ALL';
   assignmentFilter = 'ALL';
   sortBy = 'newest';
+
+  // Pagination state
+  currentPage = 1;
+  pageSize: PageSizeOption = 10;
+  readonly pageSizeOptions: PageSizeOption[] = [10, 20, 50, 100, 'ALL'];
+
+  get paginatedTickets(): Ticket[] {
+    if (this.pageSize === 'ALL') return this.filteredTickets;
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredTickets.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    this.cdr.detectChanges();
+  }
+
+  onPageSizeChange(size: PageSizeOption): void {
+    this.pageSize = size;
+    this.currentPage = 1;
+    this.cdr.detectChanges();
+  }
 
   // Confirm delete
   confirmDeleteId: number | null = null;
@@ -113,6 +136,7 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
       }
     });
     this.filteredTickets = result;
+    this.currentPage = 1;
   }
 
   private getPriorityWeight(p: TicketPriority): number { return { LOW: 1, MEDIUM: 2, HIGH: 3 }[p] ?? 0; }
