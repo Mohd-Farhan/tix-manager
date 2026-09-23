@@ -18,7 +18,7 @@ import { UserRole } from '../models/user.model';
  *    guards without legacy Class-based boilerplate.
  */
 describe('authGuard & roleGuard', () => {
-  let authServiceSpy: { isAuthenticated: () => boolean; userRole: () => UserRole | null };
+  let authServiceSpy: { isAuthenticated: () => boolean; userRole: () => UserRole | null; mustChangePassword: () => boolean };
   let routerSpy: { navigate: (commands: any[]) => boolean };
 
   const dummyRoute = {} as ActivatedRouteSnapshot;
@@ -28,6 +28,7 @@ describe('authGuard & roleGuard', () => {
     authServiceSpy = {
       isAuthenticated: () => false,
       userRole: () => null,
+      mustChangePassword: () => false,
     };
     routerSpy = {
       navigate: () => true,

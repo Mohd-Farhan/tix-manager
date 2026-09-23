@@ -49,6 +49,29 @@
       <div class="desc-body">
         {{ ticket.description }}
       </div>
+
+      <!-- Ticket-level attachments -->
+      @if (getTicketLevelAttachments().length > 0) {
+      <div class="ticket-attachments-list">
+        <span class="attachments-label">Ticket Attachments:</span>
+        <div class="attachments-chips">
+          @for (att of getTicketLevelAttachments(); track att.id) {
+          <div class="attachment-chip">
+            @if (isImage(att)) {
+            <img [src]="getPreviewUrl(att)" alt="thumbnail" class="chip-thumb" (click)="openPreview(att)" />
+            } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            }
+            <span class="chip-name" (click)="isImage(att) ? openPreview(att) : null">{{ att.fileName }}</span>
+            <span class="chip-size">({{ att.fileSizeFormatted }})</span>
+            <a [href]="getDownloadUrl(att)" download class="chip-action" title="Download">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </a>
+          </div>
+          }
+        </div>
+      </div>
+      }
     </div>
 
     <!-- Chat Messages -->
@@ -66,18 +89,84 @@
         </div>
         <div class="message-bubble">
           {{ msg.content }}
+
+          <!-- Message Attachments -->
+          @if (getAttachmentsForMessage(msg.id).length > 0) {
+          <div class="message-attachments">
+            @for (att of getAttachmentsForMessage(msg.id); track att.id) {
+            <div class="msg-att-card" [class.image-card]="isImage(att)">
+              @if (isImage(att)) {
+              <div class="att-img-preview" (click)="openPreview(att)">
+                <img [src]="getPreviewUrl(att)" [alt]="att.fileName" loading="lazy" />
+                <div class="att-img-overlay">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>View Screenshot</span>
+                </div>
+              </div>
+              }
+              <div class="att-info-row">
+                <div class="att-details">
+                  <span class="att-filename" [title]="att.fileName">{{ att.fileName }}</span>
+                  <span class="att-filesize">{{ att.fileSizeFormatted }}</span>
+                </div>
+                <div class="att-actions">
+                  @if (isImage(att)) {
+                  <button type="button" class="btn-icon" (click)="openPreview(att)" title="Preview inline">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                  }
+                  <a [href]="getDownloadUrl(att)" download class="btn-icon" title="Download">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </a>
+                  <button type="button" class="btn-icon danger" (click)="deleteAttachment(att)" title="Delete attachment">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            }
+          </div>
+          }
+
         </div>
       </div>
       }
     </div>
 
-    <!-- Chat Input -->
+    <!-- Staged File Banner -->
+    @if (selectedFile) {
+    <div class="staged-file-banner">
+      <div class="staged-file-info">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        <span class="staged-file-name">{{ selectedFile.name }}</span>
+        <span class="staged-file-size">({{ (selectedFile.size / 1024).toFixed(1) }} KB)</span>
+      </div>
+      <button type="button" class="btn-remove-staged" (click)="removeSelectedFile()" title="Remove file">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    }
+
+    <!-- Chat Input Area -->
     <div class="chat-input-area">
+      <input type="file" #fileInput (change)="onFileSelected($event)"
+        accept="image/*,.pdf,.txt,.log,.csv,.json,.xml,.zip" style="display: none" />
+
       <div class="input-wrapper">
+        <div class="input-top-bar">
+          <button type="button" class="btn-attach" (click)="fileInput.click()" title="Attach file or screenshot (max 10MB)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+            <span>Attach File</span>
+          </button>
+        </div>
+
         <textarea class="chat-input" [(ngModel)]="newMessage" (keydown)="onKeyDown($event)"
           placeholder="Type your reply to the customer (Enter to send, Shift+Enter for new line)..." rows="3"></textarea>
+        
         <div class="input-actions">
-          <button class="btn-send" (click)="sendMessage()" [disabled]="!newMessage.trim()">
+          <button class="btn-send" (click)="sendMessage()" [disabled]="!newMessage.trim() && !selectedFile">
             Send Reply
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -136,6 +225,59 @@
       }
     </div>
 
+    <!-- Attachments Gallery Box -->
+    <div class="control-box">
+      <div class="card-header-with-action">
+        <h3 class="control-box-title">Attachments ({{ attachments.length }})</h3>
+        <input type="file" #directFileInput (change)="onDirectFileUpload($event)"
+          accept="image/*,.pdf,.txt,.log,.csv,.json,.xml,.zip" style="display: none" />
+        <button type="button" class="btn-sm-upload" (click)="directFileInput.click()" [disabled]="isUploadingDirect" title="Upload Attachment">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Upload</span>
+        </button>
+      </div>
+
+      @if (attachments.length === 0) {
+      <div class="empty-gallery">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <p>No files or screenshots attached yet.</p>
+      </div>
+      } @else {
+      <div class="gallery-list">
+        @for (att of attachments; track att.id) {
+        <div class="gallery-item">
+          <div class="gallery-item-main">
+            @if (isImage(att)) {
+            <img [src]="getPreviewUrl(att)" alt="thumbnail" class="gallery-thumb" (click)="openPreview(att)" />
+            } @else {
+            <div class="gallery-doc-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            }
+            <div class="gallery-meta">
+              <span class="gallery-filename" [title]="att.fileName" (click)="isImage(att) ? openPreview(att) : null">{{ att.fileName }}</span>
+              <span class="gallery-subtext">{{ att.fileSizeFormatted }} • {{ att.uploaderName }}</span>
+            </div>
+          </div>
+          <div class="gallery-actions">
+            @if (isImage(att)) {
+            <button type="button" class="btn-icon-sm" (click)="openPreview(att)" title="Preview">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            }
+            <a [href]="getDownloadUrl(att)" download class="btn-icon-sm" title="Download">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </a>
+            <button type="button" class="btn-icon-sm danger" (click)="deleteAttachment(att)" title="Delete">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
     <!-- Properties Box -->
     <div class="control-box">
       <h3 class="control-box-title">Properties</h3>
@@ -160,5 +302,39 @@
     </div>
   </div>
 
+</div>
+}
+
+<!-- Lightbox Modal for Screenshot / Image Preview -->
+@if (selectedPreviewAttachment) {
+<div class="preview-backdrop" (click)="closePreview()">
+  <div class="preview-modal" (click)="$event.stopPropagation()">
+    <div class="preview-header">
+      <div class="preview-title-info">
+        <h4 class="preview-title">{{ selectedPreviewAttachment.fileName }}</h4>
+        <span class="preview-meta">{{ selectedPreviewAttachment.fileSizeFormatted }} • Uploaded by {{ selectedPreviewAttachment.uploaderName }}</span>
+      </div>
+      <div class="preview-header-actions">
+        <a [href]="getDownloadUrl(selectedPreviewAttachment)" download class="btn-preview-action" title="Download">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Download</span>
+        </a>
+        <button type="button" class="btn-close-modal" (click)="closePreview()" title="Close (Esc)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="preview-body">
+      @if (isImage(selectedPreviewAttachment)) {
+      <img [src]="getPreviewUrl(selectedPreviewAttachment)" [alt]="selectedPreviewAttachment.fileName" class="preview-img" />
+      } @else {
+      <div class="preview-fallback">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p>Inline preview is only supported for image and screenshot files.</p>
+        <a [href]="getDownloadUrl(selectedPreviewAttachment)" download class="btn-primary">Download File</a>
+      </div>
+      }
+    </div>
+  </div>
 </div>
 }
