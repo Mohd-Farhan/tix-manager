@@ -2,14 +2,24 @@ package com.support.service;
 
 import com.support.config.AsyncConfig;
 import com.support.entity.TicketStatus;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * ==============================================================================================
- * SERVICE: EmailService (Enterprise Asynchronous Event Notifications)
+ * SERVICE: EmailService (Enterprise Asynchronous Event Notifications & SMTP Relay)
  * ==============================================================================================
  * 
  * WHY ASYNCHRONOUS NON-BLOCKING DISPATCH (@Async):
@@ -26,7 +36,11 @@ import org.springframework.stereotype.Service;
  *      and logs it as an operational audit event rather than failing transactions or throwing
  *      connection exceptions.
  * 
- * 3. NIST SP 800-63B Credential Communication:
+ * 3. MIME Multipart & HTML Email Rendering:
+ *    - Uses Thymeleaf `TemplateEngine` to generate responsive HTML emails with Azure Professional styling.
+ *    - Sends both HTML and fallback plain text via `MimeMessageHelper.setText(plainText, htmlText)`.
+ * 
+ * 4. NIST SP 800-63B Credential Communication:
  *    - Welcome emails provide temporary/initial credentials with explicit instructions that the
  *      account is flagged for mandatory password change on first authentication.
  */
@@ -40,6 +54,15 @@ public class EmailService {
     @Value("${app.mail.from:no-reply@tixmanager.com}")
     private String mailFrom;
 
+    @Value("${app.mail.frontend-base-url:http://localhost:4200}")
+    private String frontendBaseUrl;
+
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
+
+    @Autowired(required = false)
+    private TemplateEngine templateEngine;
+
     /**
      * Dispatches welcome email with initial/temporary credentials to newly provisioned users.
      */
@@ -51,7 +74,9 @@ public class EmailService {
         }
 
         String subject = "Welcome to TixManager — Your Account Credentials";
-        String body = String.format(
+        String loginUrl = frontendBaseUrl + "/auth/login";
+
+        String textBody = String.format(
                 "Hello %s,\n\n" +
                 "Your TixManager account has been successfully provisioned by an administrator.\n\n" +
                 "Account Details:\n" +
@@ -60,11 +85,24 @@ public class EmailService {
                 "SECURITY NOTICE:\n" +
                 "For your security and compliance with NIST SP 800-63B guidelines, you will be required " +
                 "to personalize your password upon your first login.\n\n" +
-                "Login here: http://localhost:4200/auth/login\n\n" +
+                "Login here: %s\n\n" +
                 "— The TixManager Security & Support Team",
-                username, username, temporaryPassword);
+                username, username, temporaryPassword, loginUrl);
 
-        dispatchNotification(toEmail, subject, body);
+        String htmlBody = null;
+        if (templateEngine != null) {
+            try {
+                Context context = new Context();
+                context.setVariable("username", username);
+                context.setVariable("temporaryPassword", temporaryPassword);
+                context.setVariable("loginUrl", loginUrl);
+                htmlBody = templateEngine.process("email/welcome-email", context);
+            } catch (Exception e) {
+                log.warn("Failed to render welcome-email HTML template for '{}', falling back to plain text: {}", username, e.getMessage());
+            }
+        }
+
+        dispatchNotification(toEmail, subject, textBody, htmlBody);
     }
 
     /**
@@ -77,17 +115,33 @@ public class EmailService {
         }
 
         String subject = String.format("[TixManager] Ticket #%d Assigned to You: %s", ticketId, ticketTitle);
-        String body = String.format(
+        String ticketUrl = String.format("%s/agent/tickets/%d", frontendBaseUrl, ticketId);
+
+        String textBody = String.format(
                 "Hello %s,\n\n" +
                 "Support Ticket #%d has been assigned to you for resolution.\n\n" +
                 "Ticket Title: %s\n" +
                 "Current Status: IN_PROGRESS\n\n" +
                 "Please review the conversation thread and respond to the customer:\n" +
-                "http://localhost:4200/agent/tickets/%d\n\n" +
+                "%s\n\n" +
                 "— TixManager Automated Triage",
-                agentName, ticketId, ticketTitle, ticketId);
+                agentName, ticketId, ticketTitle, ticketUrl);
 
-        dispatchNotification(toEmail, subject, body);
+        String htmlBody = null;
+        if (templateEngine != null) {
+            try {
+                Context context = new Context();
+                context.setVariable("agentName", agentName);
+                context.setVariable("ticketId", ticketId);
+                context.setVariable("ticketTitle", ticketTitle);
+                context.setVariable("ticketUrl", ticketUrl);
+                htmlBody = templateEngine.process("email/ticket-assigned-email", context);
+            } catch (Exception e) {
+                log.warn("Failed to render ticket-assigned-email HTML template for ticket #{}: {}", ticketId, e.getMessage());
+            }
+        }
+
+        dispatchNotification(toEmail, subject, textBody, htmlBody);
     }
 
     /**
@@ -100,18 +154,35 @@ public class EmailService {
         }
 
         String subject = String.format("[TixManager] Ticket #%d Status Update: %s", ticketId, newStatus);
-        String body = String.format(
+        String ticketUrl = String.format("%s/tickets/%d", frontendBaseUrl, ticketId);
+
+        String textBody = String.format(
                 "Hello,\n\n" +
                 "The status of Support Ticket #%d has been updated.\n\n" +
                 "Ticket Title: %s\n" +
                 "Previous Status: %s\n" +
                 "New Status: %s\n\n" +
                 "View the updated ticket details and conversation:\n" +
-                "http://localhost:4200/tickets/%d\n\n" +
+                "%s\n\n" +
                 "— TixManager Support Team",
-                ticketId, ticketTitle, oldStatus, newStatus, ticketId);
+                ticketId, ticketTitle, oldStatus, newStatus, ticketUrl);
 
-        dispatchNotification(toEmail, subject, body);
+        String htmlBody = null;
+        if (templateEngine != null) {
+            try {
+                Context context = new Context();
+                context.setVariable("ticketId", ticketId);
+                context.setVariable("ticketTitle", ticketTitle);
+                context.setVariable("oldStatus", oldStatus != null ? oldStatus.name() : "");
+                context.setVariable("newStatus", newStatus != null ? newStatus.name() : "");
+                context.setVariable("ticketUrl", ticketUrl);
+                htmlBody = templateEngine.process("email/ticket-status-changed-email", context);
+            } catch (Exception e) {
+                log.warn("Failed to render ticket-status-changed-email HTML template for ticket #{}: {}", ticketId, e.getMessage());
+            }
+        }
+
+        dispatchNotification(toEmail, subject, textBody, htmlBody);
     }
 
     /**
@@ -128,28 +199,69 @@ public class EmailService {
                 : (messageSnippet != null ? messageSnippet : "");
 
         String subject = String.format("[TixManager] New Reply on Ticket #%d by %s", ticketId, senderName);
-        String body = String.format(
+        String ticketUrl = String.format("%s/tickets/%d", frontendBaseUrl, ticketId);
+
+        String textBody = String.format(
                 "Hello,\n\n" +
                 "%s has added a reply to Support Ticket #%d (\"%s\"):\n\n" +
                 "\"%s\"\n\n" +
                 "View full message thread and reply online:\n" +
-                "http://localhost:4200/tickets/%d\n\n" +
+                "%s\n\n" +
                 "— TixManager Notifications",
-                senderName, ticketId, ticketTitle, preview, ticketId);
+                senderName, ticketId, ticketTitle, preview, ticketUrl);
 
-        dispatchNotification(toEmail, subject, body);
+        String htmlBody = null;
+        if (templateEngine != null) {
+            try {
+                Context context = new Context();
+                context.setVariable("ticketId", ticketId);
+                context.setVariable("ticketTitle", ticketTitle);
+                context.setVariable("senderName", senderName);
+                context.setVariable("messageSnippet", preview);
+                context.setVariable("ticketUrl", ticketUrl);
+                htmlBody = templateEngine.process("email/ticket-reply-email", context);
+            } catch (Exception e) {
+                log.warn("Failed to render ticket-reply-email HTML template for ticket #{}: {}", ticketId, e.getMessage());
+            }
+        }
+
+        dispatchNotification(toEmail, subject, textBody, htmlBody);
     }
 
     /**
-     * Core dispatcher: sends via mail transport if enabled or logs structured notification event.
+     * Overload for plain text backwards compatibility.
      */
     protected void dispatchNotification(String toEmail, String subject, String body) {
-        if (mailEnabled) {
-            log.info("Dispatching external email via SMTP relay to <{}> [Subject: '{}']", toEmail, subject);
-            // Real SMTP delivery can be wired to JavaMailSender or cloud SDK when enabled
+        dispatchNotification(toEmail, subject, body, null);
+    }
+
+    /**
+     * Core dispatcher: sends MIME multipart via JavaMailSender SMTP relay if enabled, or logs operational audit event.
+     */
+    protected void dispatchNotification(String toEmail, String subject, String textBody, String htmlBody) {
+        if (mailEnabled && mailSender != null) {
+            try {
+                MimeMessage mimeMessage = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
+
+                helper.setFrom(mailFrom);
+                helper.setTo(toEmail);
+                helper.setSubject(subject);
+
+                if (htmlBody != null && !htmlBody.isBlank()) {
+                    helper.setText(textBody, htmlBody);
+                } else {
+                    helper.setText(textBody, false);
+                }
+
+                mailSender.send(mimeMessage);
+                log.info("Sent email via SMTP relay to <{}> [Subject: '{}']", toEmail, subject);
+            } catch (MessagingException | MailException ex) {
+                log.error("Failed to transmit email via SMTP relay to <{}> [Subject: '{}']: {}", toEmail, subject, ex.getMessage(), ex);
+            }
         } else {
-            log.info("[SIMULATED EMAIL NOTIFICATION] From: {} | To: {} | Subject: '{}'\n---\n{}\n---",
-                    mailFrom, toEmail, subject, body);
+            log.info("[SIMULATED EMAIL NOTIFICATION] From: {} | To: {} | Subject: '{}' | HTML: {}\n---\n{}\n---",
+                    mailFrom, toEmail, subject, (htmlBody != null ? "YES" : "NO"), textBody);
         }
     }
 }
