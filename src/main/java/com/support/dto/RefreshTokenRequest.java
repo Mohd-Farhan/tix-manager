@@ -1,5 +1,6 @@
 package com.support.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,12 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AuthResponse {
+public class RefreshTokenRequest {
 
-    private String token;
+    @NotBlank(message = "Refresh token must not be blank.")
     private String refreshToken;
-    @Builder.Default
-    private String tokenType = "Bearer";
-    private Long expiresIn;
-    private UserDTO user;
 }

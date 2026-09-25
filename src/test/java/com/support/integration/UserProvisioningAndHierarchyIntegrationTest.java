@@ -65,11 +65,11 @@ public class UserProvisioningAndHierarchyIntegrationTest {
                 .role(UserRole.CUSTOMER)
                 .build();
 
-        // /api/auth/register is no longer permitAll or mapped -> must return 403 Forbidden or 404 Not Found
+        // /api/auth/register is no longer permitAll or mapped -> unauthenticated requests receive 401 Unauthorized
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registration)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

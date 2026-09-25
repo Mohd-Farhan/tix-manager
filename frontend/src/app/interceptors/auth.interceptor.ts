@@ -1,11 +1,14 @@
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse, HttpRequest, HttpHandlerFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { AuthService } from '../services/auth.service';
+import { catchError, filter, switchMap, take, throwError, BehaviorSubject } from 'rxjs';
+
+let isRefreshing = false;
+const refreshTokenSubject = new BehaviorSubject<string | null>(null);
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const router = inject(Router);
-  const token = localStorage.getItem('tix-token');
+  const authService = inject(AuthService);
+  const token = authService.getToken();
 
   let authReq = req;
   if (token && !req.url.includes('/api/auth/')) {
@@ -18,12 +21,52 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !req.url.includes('/api/auth/login')) {
-        localStorage.removeItem('tix-token');
-        localStorage.removeItem('tix-user');
-        router.navigate(['/auth/login']);
+      // Intercept 401 Unauthorized for non-auth requests and transparently rotate refresh token
+      if (error.status === 401 && !req.url.includes('/api/auth/')) {
+        return handle401Error(authReq, next, authService);
       }
       return throwError(() => error);
     })
   );
 };
+
+function handle401Error(req: HttpRequest<unknown>, next: HttpHandlerFn, authService: AuthService) {
+  if (!isRefreshing) {
+    isRefreshing = true;
+    refreshTokenSubject.next(null);
+
+    return authService.refreshToken().pipe(
+      switchMap((res) => {
+        isRefreshing = false;
+        refreshTokenSubject.next(res.token);
+        return next(
+          req.clone({
+            setHeaders: {
+              Authorization: `Bearer ${res.token}`,
+            },
+          })
+        );
+      }),
+      catchError((err) => {
+        isRefreshing = false;
+        authService.clearSessionAndRedirect();
+        return throwError(() => err);
+      })
+    );
+  } else {
+    // Refresh handshake already active: queue request until token becomes available
+    return refreshTokenSubject.pipe(
+      filter((token) => token !== null),
+      take(1),
+      switchMap((token) =>
+        next(
+          req.clone({
+            setHeaders: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        )
+      )
+    );
+  }
+}

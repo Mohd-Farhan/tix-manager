@@ -68,12 +68,15 @@ class AuthControllerTest {
     @MockBean
     private com.support.security.LoginRateLimiterService loginRateLimiterService;
 
+    @MockBean
+    private com.support.service.RefreshTokenService refreshTokenService;
+
 
     /**
      * TEST CASE 3: Successful Login returns 200 OK and JWT Token.
      */
     @Test
-    @DisplayName("POST /api/auth/login — Return 200 OK and JWT Token upon valid credentials")
+    @DisplayName("POST /api/auth/login — Return 200 OK, JWT Token, and Refresh Token upon valid credentials")
     void testLogin_Success() throws Exception {
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setUsername("admin");
@@ -85,10 +88,18 @@ class AuthControllerTest {
         user.setRole(UserRole.ADMIN);
         UserDetailsImpl userDetails = new UserDetailsImpl(user);
 
+        com.support.entity.RefreshToken mockRt = com.support.entity.RefreshToken.builder()
+                .id(10L)
+                .token("mock-refresh-token-uuid")
+                .user(user)
+                .expiryDate(java.time.Instant.now().plusSeconds(604800))
+                .build();
+
         Authentication authentication = mock(Authentication.class);
         when(authentication.getPrincipal()).thenReturn(userDetails);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
         when(jwtService.generateToken(userDetails)).thenReturn("mock.jwt.token");
+        when(refreshTokenService.createRefreshToken(user)).thenReturn(mockRt);
 
         UserDTO userDto = UserDTO.builder().id(1L).username("admin").role(UserRole.ADMIN).build();
         when(userMapper.toDTO(user)).thenReturn(userDto);
@@ -98,6 +109,9 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("mock.jwt.token"))
+                .andExpect(jsonPath("$.refreshToken").value("mock-refresh-token-uuid"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresIn").value(900))
                 .andExpect(jsonPath("$.user.username").value("admin"));
     }
 
@@ -143,12 +157,77 @@ class AuthControllerTest {
     }
 
     /**
-     * TEST CASE 6: Logout returns 200 OK.
+     * TEST CASE 6: Token refresh succeeds with valid refresh token.
+     */
+    @Test
+    @DisplayName("POST /api/auth/refresh — Return 200 OK and rotated tokens")
+    void testRefresh_Success() throws Exception {
+        com.support.dto.RefreshTokenRequest request = new com.support.dto.RefreshTokenRequest();
+        request.setRefreshToken("valid-refresh-token");
+
+        User user = new User();
+        user.setId(2L);
+        user.setUsername("agent");
+        user.setRole(UserRole.SUPPORT_AGENT);
+
+        com.support.entity.RefreshToken newRt = com.support.entity.RefreshToken.builder()
+                .id(11L)
+                .token("new-rotated-refresh-token")
+                .user(user)
+                .expiryDate(java.time.Instant.now().plusSeconds(604800))
+                .build();
+
+        when(refreshTokenService.rotateRefreshToken("valid-refresh-token")).thenReturn(newRt);
+        when(jwtService.generateToken(any(UserDetailsImpl.class))).thenReturn("new.access.token");
+
+        UserDTO userDto = UserDTO.builder().id(2L).username("agent").role(UserRole.SUPPORT_AGENT).build();
+        when(userMapper.toDTO(user)).thenReturn(userDto);
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("new.access.token"))
+                .andExpect(jsonPath("$.refreshToken").value("new-rotated-refresh-token"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresIn").value(900))
+                .andExpect(jsonPath("$.user.username").value("agent"));
+    }
+
+    /**
+     * TEST CASE 7: Token refresh fails with revoked or expired token (returns 401 Unauthorized).
+     */
+    @Test
+    @DisplayName("POST /api/auth/refresh — Return 401 UNAUTHORIZED when refresh token revoked or invalid")
+    void testRefresh_InvalidToken() throws Exception {
+        com.support.dto.RefreshTokenRequest request = new com.support.dto.RefreshTokenRequest();
+        request.setRefreshToken("revoked-token");
+
+        when(refreshTokenService.rotateRefreshToken("revoked-token"))
+                .thenThrow(new com.support.exception.RefreshTokenException("Refresh token was previously revoked."));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Refresh token was previously revoked."));
+    }
+
+    /**
+     * TEST CASE 8: Logout returns 200 OK and revokes token.
      */
     @Test
     @DisplayName("POST /api/auth/logout — Return 200 OK")
     void testLogout_Success() throws Exception {
-        mockMvc.perform(post("/api/auth/logout"))
+        com.support.dto.RefreshTokenRequest request = new com.support.dto.RefreshTokenRequest();
+        request.setRefreshToken("user-refresh-token");
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
+
+        org.mockito.Mockito.verify(refreshTokenService).revokeToken("user-refresh-token");
     }
 }

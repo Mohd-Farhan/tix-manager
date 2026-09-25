@@ -2,12 +2,15 @@ package com.support.controller;
 
 import com.support.dto.AuthResponse;
 import com.support.dto.LoginDTO;
+import com.support.dto.RefreshTokenRequest;
 import com.support.dto.UserDTO;
+import com.support.entity.RefreshToken;
 import com.support.mapper.UserMapper;
 import com.support.security.JwtService;
 import com.support.security.LoginRateLimiterService;
 import com.support.security.UserDetailsImpl;
 import com.support.service.AuditService;
+import com.support.service.RefreshTokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -28,12 +31,12 @@ import org.springframework.web.bind.annotation.*;
  * REST CONTROLLER: AuthController
  * ==============================================================================================
  * 
- * Manages JWT authentication token issuance and session audit tracking.
+ * Manages JWT authentication token issuance, refresh token rotation, and session termination.
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Authentication", description = "Endpoints for JWT login and logout")
+@Tag(name = "Authentication", description = "Endpoints for JWT login, refresh, and logout")
 public class AuthController {
 
     @Autowired
@@ -41,6 +44,9 @@ public class AuthController {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private RefreshTokenService refreshTokenService;
 
     @Autowired
     private UserMapper userMapper;
@@ -51,9 +57,9 @@ public class AuthController {
     @Autowired
     private LoginRateLimiterService loginRateLimiterService;
 
-    @Operation(summary = "Authenticate user credentials", description = "Validates username and password, then returns a signed stateless JWT token with user details.")
+    @Operation(summary = "Authenticate user credentials", description = "Validates username and password, then returns a signed short-lived JWT token and revocable refresh token.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Authenticated successfully, returns JWT"),
+            @ApiResponse(responseCode = "200", description = "Authenticated successfully, returns access and refresh tokens"),
             @ApiResponse(responseCode = "400", description = "Missing or malformed credentials"),
             @ApiResponse(responseCode = "401", description = "Invalid username or password")
     })
@@ -92,24 +98,58 @@ public class AuthController {
         // Step 3: Record login history
         auditService.recordLoginSuccess(userDetails.getUsername(), request);
 
-        // Step 4: Generate stateless HMAC-SHA256 JWT token
+        // Step 4: Generate short-lived HMAC-SHA256 JWT access token (15m) and database refresh token (7d)
         String token = jwtService.generateToken(userDetails);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getUser());
         log.info("User {} successfully authenticated with role {}", userDetails.getUsername(), userDetails.getUser().getRole());
 
         // Step 5: Build and return the response envelope
         UserDTO userDto = userMapper.toDTO(userDetails.getUser());
         AuthResponse response = AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .expiresIn(900L)
                 .user(userDto)
                 .build();
 
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Logout user session", description = "Records logout timestamp in login history for the currently authenticated user.")
+    @Operation(summary = "Refresh access token", description = "Rotates refresh token and issues a new short-lived access token.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Token refreshed successfully"),
+            @ApiResponse(responseCode = "401", description = "Invalid, expired, or revoked refresh token")
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        RefreshToken newRefreshToken = refreshTokenService.rotateRefreshToken(request.getRefreshToken());
+        UserDetailsImpl userDetails = new UserDetailsImpl(newRefreshToken.getUser());
+        String newAccessToken = jwtService.generateToken(userDetails);
+
+        AuthResponse response = AuthResponse.builder()
+                .token(newAccessToken)
+                .refreshToken(newRefreshToken.getToken())
+                .tokenType("Bearer")
+                .expiresIn(900L)
+                .user(userMapper.toDTO(newRefreshToken.getUser()))
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Logout user session", description = "Revokes refresh token and terminates active user session.")
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(Authentication authentication) {
+    public ResponseEntity<Void> logout(
+            @RequestBody(required = false) RefreshTokenRequest request,
+            Authentication authentication) {
+        if (request != null && request.getRefreshToken() != null && !request.getRefreshToken().isBlank()) {
+            refreshTokenService.revokeToken(request.getRefreshToken());
+        }
         if (authentication != null && authentication.isAuthenticated()) {
+            if (authentication.getPrincipal() instanceof UserDetailsImpl udi) {
+                refreshTokenService.revokeAllUserTokens(udi.getUser());
+            }
             auditService.recordLogout(authentication.getName());
             log.info("User {} logged out successfully", authentication.getName());
         }

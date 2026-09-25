@@ -145,9 +145,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 4. HANDLER: BadCredentialsException
+     * 4. HANDLER: BadCredentialsException & RefreshTokenException
      * HTTP STATUS: 401 Unauthorized
-     * WHY: Triggered during authentication when the password hash or username does not match.
+     * WHY: Triggered during authentication when credentials are invalid or refresh token is expired/revoked.
      */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
@@ -157,6 +157,19 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.UNAUTHORIZED.value())
                 .error(HttpStatus.UNAUTHORIZED.getReasonPhrase())
                 .message("Invalid username or password")
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(com.support.exception.RefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleRefreshTokenException(com.support.exception.RefreshTokenException ex, HttpServletRequest request) {
+        log.warn("Refresh token failure on path [{}]: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error(HttpStatus.UNAUTHORIZED.getReasonPhrase())
+                .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);

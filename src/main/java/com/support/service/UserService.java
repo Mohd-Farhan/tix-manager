@@ -78,6 +78,9 @@ public class UserService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private RefreshTokenService refreshTokenService;
+
     @Transactional
     public UserDTO createUser(CreateUserRequest request, String currentUsername) {
         User caller = userRepository.findByUsername(currentUsername)
@@ -314,6 +317,8 @@ public class UserService {
         if (dto.getPassword() != null) {
             existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
             existingUser.setMustChangePassword(false);
+            existingUser.setPasswordChangedAt(java.time.LocalDateTime.now());
+            refreshTokenService.revokeAllUserTokens(existingUser);
         }
 
         userRepository.save(existingUser);
@@ -335,7 +340,12 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         // Password personalized: clear first-time change enforcement
         user.setMustChangePassword(false);
+        user.setPasswordChangedAt(java.time.LocalDateTime.now());
         userRepository.save(user);
+
+        // Security: Invalidate all existing refresh tokens and active sessions
+        refreshTokenService.revokeAllUserTokens(user);
+
         auditService.recordEntityChange("USER", user.getId(), "UPDATE_PASSWORD", user.getUsername(),
                 "Password updated for user '" + user.getUsername() + "'");
         log.info("Password successfully updated for userId={}", userId);
@@ -366,6 +376,7 @@ public class UserService {
 
         target.setDeleted(true);
         userRepository.save(target);
+        refreshTokenService.revokeAllUserTokens(target);
         auditService.recordEntityChange("USER", target.getId(), "DELETE", currentUsername,
                 "User '" + target.getUsername() + "' deactivated (soft-deleted)");
         log.warn("User soft-deleted: userId={}, username={}, deletedBy={}", userId, target.getUsername(), currentUsername != null ? currentUsername : "SYSTEM");

@@ -76,4 +76,18 @@ public class User extends Auditable {
      */
     @Column(name = "must_change_password", nullable = false)
     private boolean mustChangePassword = false;
+
+    /**
+     * Timestamp of latest password modification.
+     * Any JWT token issued prior to this timestamp is instantly rejected in real-time.
+     */
+    @Column(name = "password_changed_at")
+    private java.time.LocalDateTime passwordChangedAt;
+
+    /**
+     * Timestamp of latest user logout or global session termination.
+     * Any JWT token issued prior to this timestamp is instantly rejected in real-time.
+     */
+    @Column(name = "last_logout_at")
+    private java.time.LocalDateTime lastLogoutAt;
 }

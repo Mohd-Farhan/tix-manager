@@ -78,4 +78,36 @@ class JwtServiceTest {
         assertThat(jwtService.validateToken(token, userDetails)).isTrue();
         assertThat(jwtService.validateToken(token, differentUserDetails)).isFalse();
     }
+
+    @Test
+    @DisplayName("validateToken — Reject token if user changed password after token issuance")
+    void testValidateToken_PasswordChangedRevocation() {
+        String token = jwtService.generateToken(userDetails);
+
+        // User changes password 1 second in future
+        userDetails.getUser().setPasswordChangedAt(java.time.LocalDateTime.now().plusSeconds(1));
+
+        assertThat(jwtService.validateToken(token, userDetails)).isFalse();
+    }
+
+    @Test
+    @DisplayName("validateToken — Reject token if user logged out after token issuance")
+    void testValidateToken_LogoutRevocation() {
+        String token = jwtService.generateToken(userDetails);
+
+        // User logs out 1 second in future
+        userDetails.getUser().setLastLogoutAt(java.time.LocalDateTime.now().plusSeconds(1));
+
+        assertThat(jwtService.validateToken(token, userDetails)).isFalse();
+    }
+
+    @Test
+    @DisplayName("validateToken — Reject token if user account is deactivated/soft-deleted")
+    void testValidateToken_SoftDeletedUser() {
+        String token = jwtService.generateToken(userDetails);
+
+        userDetails.getUser().setDeleted(true);
+
+        assertThat(jwtService.validateToken(token, userDetails)).isFalse();
+    }
 }
