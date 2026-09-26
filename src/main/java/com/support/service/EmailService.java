@@ -236,6 +236,49 @@ public class EmailService {
     }
 
     /**
+     * Notifies assigned agent or administrators when an active ticket breaches its resolution SLA deadline.
+     */
+    @Async(AsyncConfig.AUDIT_EXECUTOR)
+    public void sendSlaBreachEmail(String toEmail, Long ticketId, String ticketTitle, String priority, String dueAtFormatted, boolean escalated) {
+        if (toEmail == null || toEmail.isBlank()) {
+            return;
+        }
+
+        String subject = String.format("[SLA BREACH ALERT] Ticket #%d has breached resolution deadline", ticketId);
+        String ticketUrl = String.format("%s/tickets/%d", frontendBaseUrl, ticketId);
+
+        String textBody = String.format(
+                "URGENT SLA BREACH NOTICE\n\n" +
+                "Support Ticket #%d has exceeded its Service Level Agreement resolution deadline.\n\n" +
+                "Ticket Title: %s\n" +
+                "Current Priority: %s\n" +
+                "SLA Target Due: %s\n" +
+                "Auto-Escalated: %s\n\n" +
+                "Immediate action is required. Review the ticket now:\n" +
+                "%s\n\n" +
+                "— TixManager Automated SLA Monitor",
+                ticketId, ticketTitle, priority, dueAtFormatted, escalated ? "YES" : "NO", ticketUrl);
+
+        String htmlBody = null;
+        if (templateEngine != null) {
+            try {
+                Context context = new Context();
+                context.setVariable("ticketId", ticketId);
+                context.setVariable("ticketTitle", ticketTitle);
+                context.setVariable("priority", priority);
+                context.setVariable("dueAt", dueAtFormatted);
+                context.setVariable("escalated", escalated);
+                context.setVariable("ticketUrl", ticketUrl);
+                htmlBody = templateEngine.process("email/sla-breach-email", context);
+            } catch (Exception e) {
+                log.warn("Failed to render sla-breach-email HTML template for ticket #{}: {}", ticketId, e.getMessage());
+            }
+        }
+
+        dispatchNotification(toEmail, subject, textBody, htmlBody);
+    }
+
+    /**
      * Core dispatcher: sends MIME multipart via JavaMailSender SMTP relay if enabled, or logs operational audit event.
      */
     protected void dispatchNotification(String toEmail, String subject, String textBody, String htmlBody) {

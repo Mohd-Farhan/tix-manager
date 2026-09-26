@@ -25,6 +25,7 @@ export class DashboardComponent implements OnInit {
     role: UserRole.SUPPORT_AGENT
   };
   stats = { unassigned: 0, myOpen: 0, myInProgress: 0, myResolved: 0, totalAll: 0 };
+  slaMetrics: import('../../../models/ticket.model').SlaMetrics | null = null;
   unassignedTickets: Ticket[] = [];
   myRecentTickets: Ticket[] = [];
   isLoading = true;
@@ -37,6 +38,13 @@ export class DashboardComponent implements OnInit {
 
   private loadDashboardData(): void {
     this.isLoading = true;
+    this.ticketService.getSlaMetrics().subscribe({
+      next: (metrics) => {
+        this.slaMetrics = metrics;
+        this.cdr.detectChanges();
+      }
+    });
+
     this.ticketService.getAllTickets().subscribe({
       next: (tickets) => {
         this.isLoading = false;

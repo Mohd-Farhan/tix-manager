@@ -30,6 +30,7 @@
       <div class="ticket-title-row">
         <h1 class="ticket-title">{{ ticket.title }}</h1>
         <span class="ticket-id">#{{ ticket.id }}</span>
+        <app-sla-badge [ticket]="ticket" [compact]="true"></app-sla-badge>
       </div>
       <div class="ticket-meta-row">
         <span>Reported by <strong>{{ getCustomerName(ticket.customerId) }}</strong></span>
@@ -196,6 +197,24 @@
       </div>
     </div>
 
+    <!-- SLA & Due Date Tracking Box -->
+    <div class="control-box">
+      <h3 class="control-box-title">SLA & Due Date</h3>
+      @if (ticket.slaDueAt) {
+      <div class="sla-sidebar-body">
+        <app-sla-badge [ticket]="ticket" [showDeadline]="true"></app-sla-badge>
+        @if (ticket.slaBreached) {
+        <div class="sla-breached-alert">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>SLA target breached. @if (ticket.escalated) { <strong>Auto-escalated.</strong> }</span>
+        </div>
+        }
+      </div>
+      } @else {
+      <p class="sla-none-text">No SLA target configured</p>
+      }
+    </div>
+
     <!-- Assignment Control Box -->
     <div class="control-box">
       <h3 class="control-box-title">Assignment</h3>
@@ -284,9 +303,13 @@
       
       <div class="property-row">
         <span class="property-label">Priority</span>
-        <div class="priority-cell">
-          <span class="priority-indicator" [ngClass]="getPriorityClass(ticket.priority)"></span>
-          <span>{{ ticket.priority }}</span>
+        <div class="priority-select-inline">
+          <select [ngModel]="ticket.priority" (ngModelChange)="updatePriority($event)" class="property-select">
+            @for (p of ticketPriorities; track p) {
+              <option [value]="p">{{ p }}</option>
+            }
+          </select>
+          <svg class="select-chevron-sm" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
       </div>
       

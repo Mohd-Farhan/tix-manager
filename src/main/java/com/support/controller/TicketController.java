@@ -3,9 +3,12 @@ package com.support.controller;
 import com.support.dto.CreateMessageRequest;
 import com.support.dto.CreateTicketRequest;
 import com.support.dto.MessageResponse;
+import com.support.dto.PriorityUpdateRequest;
+import com.support.dto.SlaMetricsDTO;
 import com.support.dto.TicketResponse;
 import com.support.dto.TicketStatusHistoryDTO;
 import com.support.entity.TicketStatus;
+import com.support.service.SlaService;
 import com.support.service.TicketService;
 import com.support.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,37 +49,56 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/tickets")
-@Tag(name = "Tickets", description = "Endpoints for ticket creation, triage, messaging, and status transitions")
+@Tag(name = "Tickets", description = "Endpoints for ticket creation, triage, messaging, SLA management, and status transitions")
 public class TicketController {
 
     @Autowired
     private TicketService ticketService;
 
     @Autowired
+    private SlaService slaService;
+
+    @Autowired
     private SecurityUtils securityUtils;
+
+    @Operation(summary = "Get SLA performance metrics", description = "Retrieves aggregated SLA compliance rates, active breach counts, and approaching breach totals.")
+    @GetMapping("/sla-metrics")
+    @PreAuthorize("hasAnyRole('SUPPORT_AGENT', 'ADMIN', 'SYSTEM_ADMIN')")
+    public ResponseEntity<SlaMetricsDTO> getSlaMetrics() {
+        return ResponseEntity.ok(slaService.getSlaMetrics());
+    }
+
+    @Operation(summary = "Update ticket priority", description = "Adjusts ticket priority level and recalculates SLA resolution deadline.")
+    @PatchMapping("/{id}/priority")
+    @PreAuthorize("hasAnyRole('SUPPORT_AGENT', 'ADMIN', 'SYSTEM_ADMIN')")
+    public ResponseEntity<TicketResponse> updatePriority(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody PriorityUpdateRequest request,
+            Authentication authentication) {
+        Long currentUserId = securityUtils.resolveUserId(authentication);
+        TicketResponse response = ticketService.updatePriority(id, request.getPriority(), currentUserId);
+        return ResponseEntity.ok(response);
+    }
 
     @Operation(summary = "Create a new support ticket", description = "Submits a new ticket for the authenticated customer. Customer ID is securely derived from JWT.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Ticket successfully created"),
-            @ApiResponse(responseCode = "400", description = "Invalid payload or validation failed"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized: Missing or invalid JWT"),
-            @ApiResponse(responseCode = "403", description = "Forbidden: User does not have CUSTOMER role")
+            @ApiResponse(responseCode = "400", description = "Validation failed on payload fields")
     })
     @PostMapping
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
     public ResponseEntity<TicketResponse> createTicket(
             @Valid @RequestBody CreateTicketRequest request,
             Authentication authentication) {
-        String username = authentication != null ? authentication.getName() : "anonymous";
-        log.info("REST: User '{}' creating ticket '{}'", username, request.getTitle());
         Long customerId = securityUtils.resolveUserId(authentication);
-        TicketResponse createdTicket = ticketService.createTicket(request, customerId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdTicket);
+        log.info("REST: Creating ticket '{}' for customerId={}", request.getTitle(), customerId);
+        TicketResponse response = ticketService.createTicket(request, customerId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "Get all active tickets", description = "Retrieves active non-deleted tickets across the organization for agents/admins.")
+    @Operation(summary = "Get all active tickets", description = "Returns active tickets in memory. Support Agent / Admin only.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "List of active tickets retrieved"),
+            @ApiResponse(responseCode = "200", description = "Tickets list retrieved"),
             @ApiResponse(responseCode = "403", description = "Forbidden: Requires SUPPORT_AGENT or ADMIN role")
     })
     @GetMapping
@@ -86,7 +108,7 @@ public class TicketController {
         return ResponseEntity.status(HttpStatus.OK).body(tickets);
     }
 
-    @Operation(summary = "Get paginated active tickets", description = "Returns pageable active tickets with configurable page size, number, and sort order.")
+    @Operation(summary = "Get paginated active tickets with optional SLA filter", description = "Returns pageable active tickets with configurable page size, number, sort order, and optional SLA filter (BREACHED, WARNING, OK, ALL).")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Page of active tickets retrieved"),
             @ApiResponse(responseCode = "403", description = "Forbidden: Requires SUPPORT_AGENT or ADMIN role")
@@ -94,10 +116,13 @@ public class TicketController {
     @GetMapping("/paged")
     @PreAuthorize("hasRole('SUPPORT_AGENT') or hasRole('ADMIN')")
     public ResponseEntity<Page<TicketResponse>> getAllTicketsPaged(
+            @RequestParam(required = false) String slaStatus,
             @ParameterObject
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
-        Page<TicketResponse> page = ticketService.getAllActiveTickets(pageable);
+        Page<TicketResponse> page = (slaStatus != null && !slaStatus.isBlank() && !"ALL".equalsIgnoreCase(slaStatus))
+                ? ticketService.getActiveTicketsFiltered(slaStatus, pageable)
+                : ticketService.getAllActiveTickets(pageable);
         return ResponseEntity.status(HttpStatus.OK).body(page);
     }
 

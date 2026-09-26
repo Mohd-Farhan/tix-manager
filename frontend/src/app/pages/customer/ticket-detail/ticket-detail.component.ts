@@ -10,10 +10,12 @@ import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.mod
 import { Message } from '../../../models/message.model';
 import { AttachmentResponse } from '../../../models/attachment.model';
 
+import { SlaBadgeComponent } from '../../../shared';
+
 @Component({
   selector: 'app-ticket-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, SlaBadgeComponent],
   templateUrl: './ticket-detail.component.html',
   styleUrl: './ticket-detail.component.css',
 })

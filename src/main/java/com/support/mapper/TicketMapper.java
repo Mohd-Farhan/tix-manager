@@ -68,6 +68,10 @@ public interface TicketMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "statusHistory", ignore = true)
+    @Mapping(target = "slaDueAt", ignore = true)
+    @Mapping(target = "slaBreached", ignore = true)
+    @Mapping(target = "escalated", ignore = true)
+    @Mapping(target = "resolvedAt", ignore = true)
     Ticket toEntity(CreateTicketRequest request);
 
     /**
@@ -85,6 +89,42 @@ public interface TicketMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "statusHistory", ignore = true)
+    @Mapping(target = "slaDueAt", ignore = true)
+    @Mapping(target = "slaBreached", ignore = true)
+    @Mapping(target = "escalated", ignore = true)
+    @Mapping(target = "resolvedAt", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateEntityFromRequest(CreateTicketRequest request, @MappingTarget Ticket ticket);
+
+    /**
+     * Dynamic SLA Operational Status Calculation:
+     * Computes remaining seconds and active/resolved SLA state.
+     */
+    @org.mapstruct.AfterMapping
+    default void populateSlaComputedFields(Ticket ticket, @MappingTarget TicketResponse response) {
+        if (ticket == null || response == null) return;
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+        if (ticket.getStatus() == com.support.entity.TicketStatus.RESOLVED) {
+            if (ticket.isSlaBreached()) {
+                response.setSlaStatus("RESOLVED_BREACHED");
+            } else {
+                response.setSlaStatus("RESOLVED_MET");
+            }
+            response.setRemainingSeconds(0L);
+            return;
+        }
+
+        if (ticket.getSlaDueAt() != null) {
+            long remaining = java.time.Duration.between(now, ticket.getSlaDueAt()).getSeconds();
+            response.setRemainingSeconds(remaining);
+            if (remaining < 0 || ticket.isSlaBreached()) {
+                response.setSlaStatus("BREACHED");
+            } else if (remaining <= 7200) { // <= 2 hours (warning threshold)
+                response.setSlaStatus("WARNING");
+            } else {
+                response.setSlaStatus("OK");
+            }
+        }
+    }
 }

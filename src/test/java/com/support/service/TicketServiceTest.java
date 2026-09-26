@@ -68,6 +68,9 @@ class TicketServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private SlaService slaService;
+
     @InjectMocks
     private TicketService ticketService;
 
@@ -88,7 +91,7 @@ class TicketServiceTest {
         agent = new User();
         agent.setId(2L);
         agent.setUsername("priya_agent");
-        agent.setEmail("priya@tixmanager.com");
+        agent.setEmail("priya@example.com");
         agent.setRole(UserRole.SUPPORT_AGENT);
 
         ticket = new Ticket();
@@ -126,6 +129,7 @@ class TicketServiceTest {
         // Arrange
         when(userRepository.findById(1L)).thenReturn(Optional.of(customer));
         when(ticketMapper.toEntity(createRequest)).thenReturn(ticket);
+        when(slaService.calculateSlaDueAt(any(), any())).thenReturn(LocalDateTime.now().plusHours(4));
         when(ticketRepository.save(any(Ticket.class))).thenReturn(ticket);
         when(historyRepository.save(any(TicketStatusHistory.class))).thenReturn(new TicketStatusHistory());
         when(ticketMapper.toResponse(ticket)).thenReturn(ticketResponse);
@@ -264,5 +268,46 @@ class TicketServiceTest {
         // Assert
         assertThat(ticket.isDeleted()).isTrue();
         verify(ticketRepository, times(1)).save(ticket);
+    }
+
+    /**
+     * TEST CASE 7: Updating ticket status to RESOLVED freezes SLA and records resolvedAt.
+     */
+    @Test
+    @DisplayName("updateTicketStatus — Transition to RESOLVED freezes SLA and records resolvedAt")
+    void testUpdateTicketStatus_ResolvedFreezesSla() {
+        ticket.setSlaDueAt(LocalDateTime.now().plusHours(2)); // Still within SLA
+        when(ticketRepository.findById(100L)).thenReturn(Optional.of(ticket));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(agent));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(i -> i.getArgument(0));
+        when(ticketMapper.toResponse(ticket)).thenReturn(ticketResponse);
+
+        ticketService.updateTicketStatus(100L, TicketStatus.RESOLVED, 2L);
+
+        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.RESOLVED);
+        assertThat(ticket.getResolvedAt()).isNotNull();
+        assertThat(ticket.isSlaBreached()).isFalse();
+        verify(ticketRepository).save(ticket);
+    }
+
+    /**
+     * TEST CASE 8: Updating ticket priority recalculates SLA target deadline.
+     */
+    @Test
+    @DisplayName("updatePriority — Adjusts priority level and recalculates SLA deadline")
+    void testUpdatePriority_Success() {
+        when(ticketRepository.findById(100L)).thenReturn(Optional.of(ticket));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(agent));
+        LocalDateTime newDueAt = LocalDateTime.now().plusHours(72);
+        when(slaService.calculateSlaDueAt(eq(TicketPriority.LOW), any())).thenReturn(newDueAt);
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(i -> i.getArgument(0));
+        when(ticketMapper.toResponse(ticket)).thenReturn(ticketResponse);
+
+        ticketService.updatePriority(100L, TicketPriority.LOW, 2L);
+
+        assertThat(ticket.getPriority()).isEqualTo(TicketPriority.LOW);
+        assertThat(ticket.getSlaDueAt()).isEqualTo(newDueAt);
+        verify(ticketRepository).save(ticket);
+        verify(auditService).recordEntityChange(eq("TICKET"), eq(100L), eq("PRIORITY_CHANGE"), eq("priya_agent"), any());
     }
 }

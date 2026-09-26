@@ -51,6 +51,23 @@
         <span class="stat-label">My Resolved</span>
       </div>
     </div>
+
+    @if (slaMetrics) {
+    <div class="stat-card" [routerLink]="['/agent/tickets']">
+      <div class="stat-icon sla-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="stat-content">
+        <span class="stat-value">{{ slaMetrics.complianceRatePercent | number:'1.0-1' }}%</span>
+        <span class="stat-label">SLA Compliance</span>
+      </div>
+      @if (slaMetrics.breached > 0) {
+      <div class="stat-trend trend-danger">{{ slaMetrics.breached }} Breached</div>
+      } @else if (slaMetrics.nearBreach > 0) {
+      <div class="stat-trend trend-warning">{{ slaMetrics.nearBreach }} Warning</div>
+      }
+    </div>
+    }
   </div>
 
   <!-- Dashboard Panels -->

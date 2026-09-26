@@ -10,10 +10,12 @@ import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.mod
 import { Message } from '../../../models/message.model';
 import { AttachmentResponse } from '../../../models/attachment.model';
 
+import { SlaBadgeComponent } from '../../../shared';
+
 @Component({
   selector: 'app-agent-ticket-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, SlaBadgeComponent],
   templateUrl: './ticket-detail.component.html',
   styleUrl: './ticket-detail.component.css',
 })
@@ -44,8 +46,9 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
   selectedFile: File | null = null;
   selectedPreviewAttachment: AttachmentResponse | null = null;
   
-  // Status controls
+  // Status & Priority controls
   ticketStatuses = Object.values(TicketStatus);
+  ticketPriorities = Object.values(TicketPriority);
   currentStatus: TicketStatus = TicketStatus.OPEN;
   
   private shouldScroll = false;
@@ -315,6 +318,22 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
       },
       error: (err) => {
         const msg = err?.error?.message || 'Failed to update ticket status.';
+        this.toastService.show(msg, 'error');
+      }
+    });
+  }
+
+  updatePriority(newPriority: TicketPriority): void {
+    if (!this.ticket || this.ticket.priority === newPriority) return;
+
+    this.ticketService.updatePriority(this.ticket.id, newPriority).subscribe({
+      next: (updated) => {
+        this.ticket = updated;
+        this.toastService.show(`Ticket priority updated to ${newPriority}. SLA deadline updated.`, 'success');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        const msg = err?.error?.message || 'Failed to update ticket priority.';
         this.toastService.show(msg, 'error');
       }
     });

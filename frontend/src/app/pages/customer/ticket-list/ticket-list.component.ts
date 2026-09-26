@@ -7,11 +7,12 @@ import { TicketService } from '../../../services/ticket.service';
 import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
 import { PaginationComponent, PageSizeOption } from '../../../shared/components/pagination/pagination.component';
+import { SlaBadgeComponent } from '../../../shared';
 
 @Component({
   selector: 'app-ticket-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, PaginationComponent],
+  imports: [CommonModule, RouterLink, FormsModule, PaginationComponent, SlaBadgeComponent],
   templateUrl: './ticket-list.component.html',
   styleUrl: './ticket-list.component.css',
 })

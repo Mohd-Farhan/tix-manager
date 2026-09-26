@@ -137,4 +137,70 @@ describe('TicketService', () => {
 
     expect(notifiedTicket).toEqual(updatedTicket);
   });
+
+  /**
+   * TEST CASE 4: getSlaMetrics fetches SLA compliance aggregates from /api/tickets/sla-metrics.
+   */
+  it('getSlaMetrics — should send GET to /api/tickets/sla-metrics and return metrics', () => {
+    const mockMetrics = {
+      totalActive: 10,
+      withinSla: 7,
+      nearBreach: 2,
+      breached: 1,
+      totalResolved: 50,
+      resolvedWithinSla: 46,
+      complianceRatePercent: 92.0,
+    };
+
+    service.getSlaMetrics().subscribe((metrics) => {
+      expect(metrics.totalActive).toBe(10);
+      expect(metrics.complianceRatePercent).toBe(92.0);
+    });
+
+    const req = httpMock.expectOne(`${apiUrl}/sla-metrics`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockMetrics);
+  });
+
+  /**
+   * TEST CASE 5: updatePriority sends PATCH request with new priority and notifies ticketUpdated$.
+   */
+  it('updatePriority — should patch priority and emit to ticketUpdated$', () => {
+    const mockTicket: Ticket = {
+      id: 42,
+      title: 'Performance issue',
+      description: 'Slow queries',
+      status: TicketStatus.OPEN,
+      priority: TicketPriority.HIGH,
+      customerId: 1,
+      createdAt: new Date().toISOString(),
+      deleted: false,
+    };
+
+    let updatedTicket: Ticket | undefined;
+    service.ticketUpdated$.subscribe((t) => (updatedTicket = t));
+
+    service.updatePriority(42, TicketPriority.HIGH).subscribe((res) => {
+      expect(res.priority).toBe(TicketPriority.HIGH);
+    });
+
+    const req = httpMock.expectOne(`${apiUrl}/42/priority`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ priority: TicketPriority.HIGH });
+    req.flush(mockTicket);
+
+    expect(updatedTicket).toEqual(mockTicket);
+  });
+
+  /**
+   * TEST CASE 6: getAllTicketsPaged includes slaStatus parameter when provided.
+   */
+  it('getAllTicketsPaged — should append slaStatus query param when filtered', () => {
+    service.getAllTicketsPaged(0, 10, 'createdAt,desc', 'BREACHED').subscribe();
+
+    const req = httpMock.expectOne(`${apiUrl}/paged?page=0&size=10&sort=createdAt,desc&slaStatus=BREACHED`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ content: [], totalElements: 0, totalPages: 0, size: 10, number: 0 });
+  });
 });
+

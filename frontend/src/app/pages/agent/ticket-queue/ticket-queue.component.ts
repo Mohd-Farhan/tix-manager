@@ -7,11 +7,12 @@ import { TicketService } from '../../../services/ticket.service';
 import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
 import { PaginationComponent, PageSizeOption } from '../../../shared/components/pagination/pagination.component';
+import { SlaBadgeComponent } from '../../../shared';
 
 @Component({
   selector: 'app-agent-ticket-queue',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, PaginationComponent],
+  imports: [CommonModule, FormsModule, RouterLink, PaginationComponent, SlaBadgeComponent],
   templateUrl: './ticket-queue.component.html',
   styleUrl: './ticket-queue.component.css'
 })
@@ -32,6 +33,7 @@ export class TicketQueueComponent implements OnInit, OnDestroy {
   searchTerm = '';
   statusFilter = 'ALL'; // ALL, OPEN, IN_PROGRESS, RESOLVED
   assignmentFilter = 'ALL'; // ALL, UNASSIGNED, ASSIGNED_TO_ME
+  slaFilter = 'ALL'; // ALL, BREACHED, WARNING, OK
   sortBy = 'newest';
 
   // Pagination state
@@ -161,7 +163,22 @@ export class TicketQueueComponent implements OnInit, OnDestroy {
       result = result.filter((t) => t.assignedAgentId === this.currentUserId);
     }
 
-    // 4. Sorting
+    // 4. SLA filter
+    if (this.slaFilter !== 'ALL') {
+      result = result.filter((t) => {
+        if (!t.slaDueAt) return false;
+        if (this.slaFilter === 'BREACHED') {
+          return t.slaBreached || t.slaStatus === 'BREACHED';
+        } else if (this.slaFilter === 'WARNING') {
+          return t.slaStatus === 'WARNING';
+        } else if (this.slaFilter === 'OK') {
+          return t.slaStatus === 'OK';
+        }
+        return true;
+      });
+    }
+
+    // 5. Sorting
     result.sort((a, b) => {
       switch (this.sortBy) {
         case 'newest':
@@ -174,6 +191,10 @@ export class TicketQueueComponent implements OnInit, OnDestroy {
           return this.getPriorityWeight(a.priority) - this.getPriorityWeight(b.priority);
         case 'recently-updated':
           return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+        case 'sla-due-asc':
+          if (!a.slaDueAt) return 1;
+          if (!b.slaDueAt) return -1;
+          return new Date(a.slaDueAt).getTime() - new Date(b.slaDueAt).getTime();
         default:
           return 0;
       }

@@ -174,10 +174,11 @@
 .col-id { width: 80px; font-weight: 600; color: var(--on-surface-variant); }
 .col-title { min-width: 280px; font-weight: 600; }
 .col-customer { min-width: 160px; }
-.col-status { width: 140px; }
-.col-priority { width: 120px; }
-.col-agent { min-width: 160px; }
-.col-date { width: 140px; color: var(--on-surface-variant); }
+.col-status { width: 130px; }
+.col-priority { width: 110px; }
+.col-sla { width: 170px; min-width: 150px; }
+.col-agent { min-width: 150px; }
+.col-date { width: 130px; color: var(--on-surface-variant); }
 .col-action { width: 120px; text-align: right; }
 
 .title-text {

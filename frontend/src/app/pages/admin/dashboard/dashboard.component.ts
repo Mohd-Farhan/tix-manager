@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { TicketService } from '../../../services/ticket.service';
 import { UserService } from '../../../services/user.service';
-import { Ticket, TicketStatus } from '../../../models/ticket.model';
+import { Ticket, TicketStatus, SlaMetrics } from '../../../models/ticket.model';
 import { User, UserRole } from '../../../models/user.model';
 
 @Component({
@@ -20,6 +20,7 @@ export class AdminDashboardComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   stats = { totalTickets: 0, totalUsers: 0, openTickets: 0, inProgressTickets: 0, resolvedTickets: 0, avgResolutionHours: 0, customerCount: 0, agentCount: 0 };
+  slaMetrics: SlaMetrics | null = null;
   agentPerformance: Array<{ agentId: number; agentName: string; open: number; inProgress: number; resolved: number; total: number }> = [];
   recentActivity: Array<{ ticketId: number; ticketTitle: string; previousStatus: TicketStatus; newStatus: TicketStatus; changedBy: string; changedAt: string }> = [];
   isLoading = true;
@@ -33,9 +34,11 @@ export class AdminDashboardComponent implements OnInit {
     forkJoin({
       tickets: this.ticketService.getAllTicketsAdmin(),
       users: this.userService.getAllUsersAdmin(),
+      slaMetrics: this.ticketService.getSlaMetrics(),
     }).subscribe({
-      next: ({ tickets, users }) => {
+      next: ({ tickets, users, slaMetrics }) => {
         this.isLoading = false;
+        this.slaMetrics = slaMetrics;
         const activeTickets = tickets.filter((t) => !t.deleted);
         const resolved = activeTickets.filter((t) => t.status === TicketStatus.RESOLVED);
 

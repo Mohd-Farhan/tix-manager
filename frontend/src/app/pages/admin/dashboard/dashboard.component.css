@@ -159,7 +159,45 @@
 /* Empty State */
 .empty-state { text-align: center; padding: 2rem; color: var(--on-surface-variant); }
 
+/* SLA Metrics & Health Panel */
+.sla-icon { background: color-mix(in srgb, var(--blue-600) 15%, transparent); color: var(--blue-600); }
+.trend-danger { background: var(--error-container); color: var(--on-error-container); }
+.ok-chip { background: color-mix(in srgb, #16a34a 15%, transparent); color: #16a34a; }
+.warning-chip { background: color-mix(in srgb, #eab308 18%, transparent); color: #92400e; }
+.danger-chip { background: var(--error-container); color: var(--on-error-container); }
+
+.sla-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1.25rem;
+  padding: 0.5rem 0;
+}
+.sla-overview-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+  background: var(--surface-container);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--outline-variant);
+}
+.sla-stat-num {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1.1;
+}
+.sla-stat-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+.text-success { color: #16a34a; }
+.text-warning { color: #d97706; }
+.text-danger { color: var(--error); }
+
 @media (max-width: 768px) {
   .dashboard-panels { grid-template-columns: 1fr; }
   .breakdown-counts { width: 100%; }
 }
+

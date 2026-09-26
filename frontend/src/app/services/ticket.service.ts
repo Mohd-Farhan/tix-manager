@@ -53,8 +53,22 @@ export class TicketService {
     return this.http.get<Ticket[]>(this.apiUrl);
   }
 
-  getAllTicketsPaged(page: number = 0, size: number = 20, sort: string = 'createdAt,desc'): Observable<PageResponse<Ticket>> {
-    return this.http.get<PageResponse<Ticket>>(`${this.apiUrl}/paged?page=${page}&size=${size}&sort=${sort}`);
+  getAllTicketsPaged(page: number = 0, size: number = 20, sort: string = 'createdAt,desc', slaStatus?: string): Observable<PageResponse<Ticket>> {
+    let url = `${this.apiUrl}/paged?page=${page}&size=${size}&sort=${sort}`;
+    if (slaStatus && slaStatus !== 'ALL') {
+      url += `&slaStatus=${encodeURIComponent(slaStatus)}`;
+    }
+    return this.http.get<PageResponse<Ticket>>(url);
+  }
+
+  getSlaMetrics(): Observable<import('../models/ticket.model').SlaMetrics> {
+    return this.http.get<import('../models/ticket.model').SlaMetrics>(`${this.apiUrl}/sla-metrics`);
+  }
+
+  updatePriority(ticketId: number, priority: TicketPriority): Observable<Ticket> {
+    return this.http.patch<Ticket>(`${this.apiUrl}/${ticketId}/priority`, { priority }).pipe(
+      tap((ticket) => this.notifyTicketUpdated(ticket))
+    );
   }
 
   getTicketById(id: number): Observable<Ticket> {

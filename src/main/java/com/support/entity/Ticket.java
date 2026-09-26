@@ -42,7 +42,9 @@ import lombok.*;
         @Index(name = "idx_ticket_customer", columnList = "customer_id"),
         @Index(name = "idx_ticket_agent", columnList = "agent_id"),
         @Index(name = "idx_ticket_status", columnList = "status"),
-        @Index(name = "idx_ticket_created_at", columnList = "created_at DESC")
+        @Index(name = "idx_ticket_created_at", columnList = "created_at DESC"),
+        @Index(name = "idx_ticket_status_sla", columnList = "status, sla_due_at"),
+        @Index(name = "idx_ticket_sla_breached", columnList = "sla_breached")
 })
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -78,6 +80,30 @@ public class Ticket extends Auditable {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TicketPriority priority = TicketPriority.MEDIUM;
+
+    /**
+     * Target resolution timestamp calculated from priority SLA policy.
+     */
+    @Column(name = "sla_due_at")
+    private java.time.LocalDateTime slaDueAt;
+
+    /**
+     * True if resolution deadline was exceeded while ticket was active or upon resolution.
+     */
+    @Column(name = "sla_breached", nullable = false)
+    private boolean slaBreached = false;
+
+    /**
+     * True if ticket priority was automatically escalated by the background SLA engine.
+     */
+    @Column(name = "escalated", nullable = false)
+    private boolean escalated = false;
+
+    /**
+     * Timestamp when the ticket reached terminal RESOLVED status (freezes SLA measurement).
+     */
+    @Column(name = "resolved_at")
+    private java.time.LocalDateTime resolvedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)

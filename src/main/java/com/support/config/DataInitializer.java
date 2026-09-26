@@ -87,6 +87,9 @@ public class DataInitializer implements CommandLineRunner {
         t1.setDescription("After resetting my password via the forgot-password flow, I am unable to log in. The page returns a 403 Forbidden error.");
         t1.setStatus(TicketStatus.IN_PROGRESS);
         t1.setPriority(TicketPriority.HIGH);
+        t1.setSlaDueAt(java.time.LocalDateTime.now().plusHours(2)); // Approaching breach (Warning)
+        t1.setSlaBreached(false);
+        t1.setEscalated(false);
         t1.setCustomer(farhan);
         t1.setAssignedAgent(priya);
         ticketRepository.save(t1);
@@ -116,6 +119,9 @@ public class DataInitializer implements CommandLineRunner {
         t2.setDescription("When I click the 'Export PDF' button on the billing page, nothing happens. The browser console shows a network timeout error.");
         t2.setStatus(TicketStatus.OPEN);
         t2.setPriority(TicketPriority.MEDIUM);
+        t2.setSlaDueAt(java.time.LocalDateTime.now().plusHours(18)); // Within SLA (OK)
+        t2.setSlaBreached(false);
+        t2.setEscalated(false);
         t2.setCustomer(farhan);
         ticketRepository.save(t2);
 
@@ -132,6 +138,10 @@ public class DataInitializer implements CommandLineRunner {
         t3.setDescription("I would like to upgrade my current Basic plan to the Professional plan. Please let me know the steps required.");
         t3.setStatus(TicketStatus.RESOLVED);
         t3.setPriority(TicketPriority.LOW);
+        t3.setSlaDueAt(java.time.LocalDateTime.now().minusDays(1));
+        t3.setResolvedAt(java.time.LocalDateTime.now().minusHours(28));
+        t3.setSlaBreached(false);
+        t3.setEscalated(false);
         t3.setCustomer(farhan);
         t3.setAssignedAgent(rahul);
         ticketRepository.save(t3);
@@ -162,12 +172,15 @@ public class DataInitializer implements CommandLineRunner {
         m4.setContent("Hi Farhan! I have processed your upgrade request. Your plan has been upgraded to Professional.");
         messageRepository.save(m4);
 
-        // Ticket 4: Alex's Open Ticket
+        // Ticket 4: Alex's Open Ticket (Breached & Auto-Escalated)
         Ticket t4 = new Ticket();
         t4.setTitle("Webhook delivery failing with 502 errors");
         t4.setDescription("Our webhook endpoint has been receiving 502 Bad Gateway responses from TixManager for the past 3 hours.");
         t4.setStatus(TicketStatus.OPEN);
         t4.setPriority(TicketPriority.HIGH);
+        t4.setSlaDueAt(java.time.LocalDateTime.now().minusHours(2)); // Breached
+        t4.setSlaBreached(true);
+        t4.setEscalated(true);
         t4.setCustomer(alex);
         ticketRepository.save(t4);
 

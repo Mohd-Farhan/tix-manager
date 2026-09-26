@@ -1015,3 +1015,70 @@
   font-size: 0.875rem;
 }
 
+/* SLA Sidebar styles */
+.sla-sidebar-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sla-breached-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--error-container);
+  color: var(--on-error-container);
+  border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.sla-breached-alert svg {
+  color: var(--error);
+  flex-shrink: 0;
+}
+
+.sla-none-text {
+  font-size: 0.8125rem;
+  color: var(--on-surface-variant);
+  font-style: italic;
+}
+
+.priority-select-inline {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.property-select {
+  appearance: none;
+  padding: 0.25rem 1.75rem 0.25rem 0.6rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.property-select:hover {
+  border-color: var(--outline);
+}
+
+.property-select:focus {
+  outline: none;
+  border-color: var(--blue-500);
+}
+
+.select-chevron-sm {
+  position: absolute;
+  right: 0.5rem;
+  pointer-events: none;
+  color: var(--on-surface-variant);
+}
+
+

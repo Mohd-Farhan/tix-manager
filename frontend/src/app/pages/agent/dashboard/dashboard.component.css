@@ -108,6 +108,11 @@
   color: #16a34a;
 }
 
+.sla-icon {
+  background: color-mix(in srgb, var(--blue-600) 15%, transparent);
+  color: var(--blue-600);
+}
+
 .stat-content {
   display: flex;
   flex-direction: column;
@@ -139,8 +144,13 @@
 }
 
 .trend-warning {
-  background: color-mix(in srgb, var(--error) 15%, transparent);
-  color: var(--error);
+  background: color-mix(in srgb, #eab308 18%, transparent);
+  color: #92400e;
+}
+
+.trend-danger {
+  background: var(--error-container);
+  color: var(--on-error-container);
 }
 
 /* Dashboard Panels */

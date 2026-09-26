@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLA Resolution Breach Alert</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f7f9fb;
+      color: #191c1e;
+      -webkit-font-smoothing: antialiased;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 24px auto;
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(10, 25, 47, 0.08);
+      border: 1px solid #e0e3e5;
+    }
+    .email-header {
+      background: linear-gradient(135deg, #0a192f 0%, #13284c 100%);
+      padding: 32px 28px;
+      text-align: center;
+      border-bottom: 3px solid #ba1a1a;
+    }
+    .header-logo {
+      font-size: 24px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+    .header-subtitle {
+      font-size: 13px;
+      color: #ffb4ab;
+      margin-top: 6px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .email-body {
+      padding: 32px 28px;
+    }
+    .alert-banner {
+      background-color: #ffdad6;
+      border-left: 4px solid #ba1a1a;
+      padding: 16px 20px;
+      border-radius: 6px;
+      margin-bottom: 24px;
+    }
+    .alert-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #93000a;
+      margin-bottom: 4px;
+    }
+    .alert-desc {
+      font-size: 13px;
+      color: #690005;
+      line-height: 1.5;
+    }
+    .ticket-card {
+      background-color: #f0f5fd;
+      border: 1px solid #dce8f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .ticket-id {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #0058be;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .ticket-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0a192f;
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+    .meta-grid {
+      display: table;
+      width: 100%;
+      border-top: 1px solid #dce8f9;
+      padding-top: 14px;
+    }
+    .meta-row {
+      display: table-row;
+    }
+    .meta-label {
+      display: table-cell;
+      font-size: 13px;
+      color: #45464d;
+      padding: 4px 0;
+      font-weight: 600;
+      width: 40%;
+    }
+    .meta-value {
+      display: table-cell;
+      font-size: 13px;
+      color: #191c1e;
+      padding: 4px 0;
+    }
+    .badge-breach {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      background-color: #ffdad6;
+      color: #93000a;
+    }
+    .badge-escalated {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      background-color: #0a192f;
+      color: #ffffff;
+      margin-left: 6px;
+    }
+    .cta-container {
+      text-align: center;
+      margin: 28px 0 12px 0;
+    }
+    .btn-action {
+      display: inline-block;
+      background-color: #ba1a1a;
+      color: #ffffff !important;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 12px 28px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(186, 26, 26, 0.25);
+    }
+    .email-footer {
+      background-color: #f7f9fb;
+      padding: 20px 28px;
+      text-align: center;
+      font-size: 12px;
+      color: #76777d;
+      border-top: 1px solid #e0e3e5;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-header">
+      <div class="header-logo">TixManager</div>
+      <div class="header-subtitle">Automated SLA Monitoring Alert</div>
+    </div>
+    <div class="email-body">
+      <div class="alert-banner">
+        <div class="alert-title">SLA Resolution Deadline Breached</div>
+        <div class="alert-desc">
+          This support ticket has exceeded its target resolution SLA deadline and requires immediate agent or managerial intervention.
+        </div>
+      </div>
+
+      <div class="ticket-card">
+        <div class="ticket-id" th:text="'Ticket #' + ${ticketId}">Ticket #101</div>
+        <div class="ticket-title" th:text="${ticketTitle}">Database connection timeout</div>
+        
+        <div class="meta-grid">
+          <div class="meta-row">
+            <span class="meta-label">Current Priority:</span>
+            <span class="meta-value">
+              <strong th:text="${priority}">HIGH</strong>
+              <span th:if="${escalated}" class="badge-escalated">AUTO-ESCALATED</span>
+            </span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Target Due Date:</span>
+            <span class="meta-value" th:text="${dueAt}">2026-09-20 14:00</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">SLA Compliance:</span>
+            <span class="meta-value"><span class="badge-breach">BREACHED</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta-container">
+        <a th:href="${ticketUrl}" class="btn-action">Review &amp; Expedite Ticket</a>
+      </div>
+    </div>
+    <div class="email-footer">
+      This is an automated notification from TixManager SLA Escalation Engine.<br>
+      Please do not reply directly to this email.
+    </div>
+  </div>
+</body>
+</html>

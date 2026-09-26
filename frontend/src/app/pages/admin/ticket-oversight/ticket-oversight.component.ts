@@ -14,10 +14,12 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { PaginationComponent, PageSizeOption } from '../../../shared/components/pagination/pagination.component';
 import { ToastService } from '../../../shared/services/toast.service';
 
+import { SlaBadgeComponent } from '../../../shared';
+
 @Component({
   selector: 'app-admin-ticket-oversight',
   standalone: true,
-  imports: [CommonModule, FormsModule, StatusBadgeComponent, PriorityBadgeComponent, EmptyStateComponent, SearchBoxComponent, ConfirmDialogComponent, PaginationComponent],
+  imports: [CommonModule, FormsModule, StatusBadgeComponent, PriorityBadgeComponent, EmptyStateComponent, SearchBoxComponent, ConfirmDialogComponent, PaginationComponent, SlaBadgeComponent],
   templateUrl: './ticket-oversight.component.html',
   styleUrl: './ticket-oversight.component.css',
 })

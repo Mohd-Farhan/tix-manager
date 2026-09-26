@@ -29,6 +29,7 @@
           <div class="ticket-badges">
             <span class="badge" [ngClass]="getStatusClass(ticket.status)">{{ getStatusLabel(ticket.status) }}</span>
             <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">{{ ticket.priority }}</span>
+            <app-sla-badge [ticket]="ticket" [compact]="true"></app-sla-badge>
           </div>
         </div>
         <h1 class="ticket-title">{{ ticket.title }}</h1>
@@ -235,6 +236,16 @@
           <span class="info-label">Assigned To</span>
           <span class="info-value">{{ ticket.assignedAgentName ?? 'Unassigned' }}</span>
         </div>
+        @if (ticket.slaDueAt) {
+        <div class="info-row">
+          <span class="info-label">SLA Target</span>
+          <span class="info-value">{{ ticket.slaDueAt | date:'MMM d, y, h:mm a' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">SLA Status</span>
+          <app-sla-badge [ticket]="ticket" [compact]="true"></app-sla-badge>
+        </div>
+        }
       </div>
 
       <!-- Status History -->

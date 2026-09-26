@@ -70,4 +70,22 @@ public class TicketResponse {
 
     @Schema(description = "Audit timeline history of state transitions")
     private List<TicketStatusHistoryDTO> history;
+
+    @Schema(description = "SLA resolution deadline timestamp")
+    private LocalDateTime slaDueAt;
+
+    @Schema(description = "Flag indicating if SLA deadline has been breached")
+    private boolean slaBreached;
+
+    @Schema(description = "Flag indicating if priority was escalated by the automated SLA engine")
+    private boolean escalated;
+
+    @Schema(description = "Timestamp when ticket was resolved (freezes SLA measurement)")
+    private LocalDateTime resolvedAt;
+
+    @Schema(description = "Dynamic SLA operational status: OK, WARNING, BREACHED, RESOLVED_MET, RESOLVED_BREACHED", example = "OK")
+    private String slaStatus;
+
+    @Schema(description = "Seconds remaining until SLA breach (negative if breached)", example = "3600")
+    private Long remainingSeconds;
 }

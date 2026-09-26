@@ -72,6 +72,9 @@ public class TicketService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private SlaService slaService;
+
     /**
      * MUTATION: Create a new support ticket and record initial audit history.
      */
@@ -83,6 +86,12 @@ public class TicketService {
         Ticket ticket = ticketMapper.toEntity(request);
         ticket.setCustomer(customer);
         ticket.setStatus(TicketStatus.OPEN);
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        ticket.setSlaDueAt(slaService.calculateSlaDueAt(ticket.getPriority(), now));
+        ticket.setSlaBreached(false);
+        ticket.setEscalated(false);
+
         ticketRepository.save(ticket);
         auditService.recordEntityChange("TICKET", ticket.getId(), "CREATE", customer.getUsername(),
                 "Ticket created: '" + ticket.getTitle() + "'");
@@ -158,6 +167,22 @@ public class TicketService {
 
         TicketStatus oldStatus = ticket.getStatus();
         ticket.setStatus(newStatus);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+        // SLA Lifecycle state management:
+        if (newStatus == TicketStatus.RESOLVED) {
+            ticket.setResolvedAt(now);
+            if (ticket.getSlaDueAt() != null && now.isAfter(ticket.getSlaDueAt())) {
+                ticket.setSlaBreached(true);
+            }
+        } else if (oldStatus == TicketStatus.RESOLVED) {
+            // Ticket reopened from RESOLVED
+            ticket.setResolvedAt(null);
+            if (ticket.getSlaDueAt() != null) {
+                ticket.setSlaBreached(now.isAfter(ticket.getSlaDueAt()));
+            }
+        }
+
         ticketRepository.save(ticket);
         auditService.recordEntityChange("TICKET", ticket.getId(), "STATUS_CHANGE", changedBy.getUsername(),
                 "Ticket status updated from " + oldStatus + " to " + newStatus);
@@ -178,6 +203,36 @@ public class TicketService {
         if (ticket.getAssignedAgent() != null && !ticket.getAssignedAgent().getId().equals(changedByUserId) && ticket.getAssignedAgent().getEmail() != null) {
             emailService.sendTicketStatusChangedEmail(ticket.getAssignedAgent().getEmail(), ticket.getId(), ticket.getTitle(), oldStatus, newStatus);
         }
+
+        return ticketMapper.toResponse(ticket);
+    }
+
+    /**
+     * MUTATION: Adjust ticket priority and recalculate SLA target deadline if active.
+     */
+    @Transactional
+    public TicketResponse updatePriority(Long ticketId, TicketPriority newPriority, Long changedByUserId) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
+
+        User changedBy = userRepository.findById(changedByUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", changedByUserId));
+
+        TicketPriority oldPriority = ticket.getPriority();
+        ticket.setPriority(newPriority);
+
+        // Recalculate SLA due date from creation timestamp if ticket is still active
+        if (ticket.getStatus() != TicketStatus.RESOLVED) {
+            java.time.LocalDateTime baseline = ticket.getCreatedAt() != null ? ticket.getCreatedAt() : java.time.LocalDateTime.now();
+            java.time.LocalDateTime newDueAt = slaService.calculateSlaDueAt(newPriority, baseline);
+            ticket.setSlaDueAt(newDueAt);
+            ticket.setSlaBreached(java.time.LocalDateTime.now().isAfter(newDueAt));
+        }
+
+        ticketRepository.save(ticket);
+        auditService.recordEntityChange("TICKET", ticket.getId(), "PRIORITY_CHANGE", changedBy.getUsername(),
+                "Priority updated from " + oldPriority + " to " + newPriority);
+        log.info("Ticket id={} priority updated: {} -> {} by userId={}", ticketId, oldPriority, newPriority, changedByUserId);
 
         return ticketMapper.toResponse(ticket);
     }
@@ -307,5 +362,27 @@ public class TicketService {
     public List<TicketResponse> getAllTicketsIncludingDeleted() {
         List<Ticket> tickets = ticketRepository.findAllIncludingDeleted();
         return ticketMapper.toResponseList(tickets);
+    }
+
+    /**
+     * QUERY: Paginated active tickets with optional SLA status filter (BREACHED, WARNING, OK, ALL).
+     */
+    public Page<TicketResponse> getActiveTicketsFiltered(String slaStatus, Pageable pageable) {
+        if (slaStatus == null || slaStatus.isBlank() || "ALL".equalsIgnoreCase(slaStatus)) {
+            return ticketRepository.findAll(pageable).map(ticketMapper::toResponse);
+        }
+
+        List<TicketStatus> activeStatuses = List.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+        if ("BREACHED".equalsIgnoreCase(slaStatus)) {
+            return ticketRepository.findByStatusInAndSlaBreachedTrue(activeStatuses, pageable).map(ticketMapper::toResponse);
+        } else if ("WARNING".equalsIgnoreCase(slaStatus) || "NEAR_BREACH".equalsIgnoreCase(slaStatus)) {
+            return ticketRepository.findByStatusInAndSlaBreachedFalseAndSlaDueAtBetween(activeStatuses, now, now.plusHours(2), pageable).map(ticketMapper::toResponse);
+        } else if ("OK".equalsIgnoreCase(slaStatus) || "WITHIN_SLA".equalsIgnoreCase(slaStatus)) {
+            return ticketRepository.findByStatusInAndSlaBreachedFalseAndSlaDueAtBetween(activeStatuses, now.plusHours(2), now.plusYears(10), pageable).map(ticketMapper::toResponse);
+        }
+
+        return ticketRepository.findAll(pageable).map(ticketMapper::toResponse);
     }
 }

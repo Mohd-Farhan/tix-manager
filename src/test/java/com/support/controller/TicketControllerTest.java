@@ -58,6 +58,9 @@ class TicketControllerTest {
     private org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
 
     @MockBean
+    private com.support.service.SlaService slaService;
+
+    @MockBean
     private com.support.security.TicketSecurity ticketSecurity;
 
     /**
@@ -167,5 +170,63 @@ class TicketControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("Concurrent Modification Conflict"))
                 .andExpect(jsonPath("$.message").value("This ticket was updated by another user or agent in the background. Please refresh and try again."));
+    }
+
+    /**
+     * TEST CASE 6: GET /api/tickets/sla-metrics returns 200 OK and SLA statistics.
+     */
+    @Test
+    @DisplayName("GET /api/tickets/sla-metrics — Returns 200 OK with SLA metrics")
+    void testGetSlaMetrics_Success() throws Exception {
+        com.support.dto.SlaMetricsDTO metrics = com.support.dto.SlaMetricsDTO.builder()
+                .totalActive(15)
+                .withinSla(10)
+                .nearBreach(3)
+                .breached(2)
+                .totalResolved(100)
+                .resolvedWithinSla(94)
+                .complianceRatePercent(94.0)
+                .build();
+
+        when(slaService.getSlaMetrics()).thenReturn(metrics);
+
+        mockMvc.perform(get("/api/tickets/sla-metrics"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalActive").value(15))
+                .andExpect(jsonPath("$.withinSla").value(10))
+                .andExpect(jsonPath("$.nearBreach").value(3))
+                .andExpect(jsonPath("$.breached").value(2))
+                .andExpect(jsonPath("$.complianceRatePercent").value(94.0));
+    }
+
+    /**
+     * TEST CASE 7: PATCH /api/tickets/{id}/priority adjusts priority and returns 200 OK.
+     */
+    @Test
+    @DisplayName("PATCH /api/tickets/{id}/priority — Adjusts priority level")
+    void testUpdatePriority_Success() throws Exception {
+        com.support.dto.PriorityUpdateRequest request = com.support.dto.PriorityUpdateRequest.builder()
+                .priority(TicketPriority.HIGH)
+                .build();
+
+        TicketResponse updated = TicketResponse.builder()
+                .id(10L)
+                .title("Sample ticket")
+                .priority(TicketPriority.HIGH)
+                .status(TicketStatus.OPEN)
+                .slaStatus("WARNING")
+                .remainingSeconds(3600L)
+                .build();
+
+        when(securityUtils.resolveUserId(any())).thenReturn(2L);
+        when(ticketService.updatePriority(eq(10L), eq(TicketPriority.HIGH), eq(2L))).thenReturn(updated);
+
+        mockMvc.perform(patch("/api/tickets/10/priority")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.priority").value("HIGH"))
+                .andExpect(jsonPath("$.slaStatus").value("WARNING"));
     }
 }

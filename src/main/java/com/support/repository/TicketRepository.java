@@ -69,4 +69,52 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     @Query("SELECT t FROM Ticket t WHERE t.customer.id = :customerId")
     List<Ticket> findByCustomerIdIncludingDeleted(@Param("customerId") Long customerId);
+
+    /**
+     * Paginated SLA breach detection query for background escalation scheduler.
+     * Selectively fetches customer and assignedAgent to avoid N+1 queries during notification dispatch.
+     */
+    @EntityGraph(attributePaths = { "customer", "assignedAgent" })
+    Page<Ticket> findByStatusInAndSlaDueAtBeforeAndSlaBreachedFalse(
+            java.util.Collection<TicketStatus> statuses,
+            java.time.LocalDateTime now,
+            Pageable pageable);
+
+    /**
+     * Active tickets that have breached SLA (for queue filtering and dashboard metrics).
+     */
+    @EntityGraph(attributePaths = { "customer", "assignedAgent" })
+    Page<Ticket> findByStatusInAndSlaBreachedTrue(
+            java.util.Collection<TicketStatus> statuses,
+            Pageable pageable);
+
+    /**
+     * Active tickets approaching SLA breach within the warning threshold window.
+     */
+    @EntityGraph(attributePaths = { "customer", "assignedAgent" })
+    Page<Ticket> findByStatusInAndSlaBreachedFalseAndSlaDueAtBetween(
+            java.util.Collection<TicketStatus> statuses,
+            java.time.LocalDateTime start,
+            java.time.LocalDateTime end,
+            Pageable pageable);
+
+    /**
+     * SLA Metric Counts
+     */
+    long countByStatusInAndSlaBreachedTrue(java.util.Collection<TicketStatus> statuses);
+
+    long countByStatusInAndSlaBreachedFalseAndSlaDueAtBetween(
+            java.util.Collection<TicketStatus> statuses,
+            java.time.LocalDateTime start,
+            java.time.LocalDateTime end);
+
+    long countByStatusIn(java.util.Collection<TicketStatus> statuses);
+
+    long countByStatus(TicketStatus status);
+
+    @Query("SELECT COUNT(t) FROM Ticket t WHERE t.status = 'RESOLVED' AND t.slaBreached = false")
+    long countResolvedWithinSla();
+
+    @Query("SELECT COUNT(t) FROM Ticket t WHERE t.status = 'RESOLVED'")
+    long countTotalResolved();
 }

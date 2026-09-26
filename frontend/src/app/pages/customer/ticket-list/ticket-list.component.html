@@ -71,6 +71,7 @@
         <div class="ticket-badges">
           <span class="badge" [ngClass]="getStatusClass(ticket.status)">{{ getStatusLabel(ticket.status) }}</span>
           <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">{{ ticket.priority }}</span>
+          <app-sla-badge [ticket]="ticket" [compact]="true"></app-sla-badge>
         </div>
       </div>
       <h3 class="ticket-title">{{ ticket.title }}</h3>

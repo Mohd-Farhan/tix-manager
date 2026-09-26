@@ -63,6 +63,7 @@
           <th class="col-customer">Customer</th>
           <th class="col-status">Status</th>
           <th class="col-priority">Priority</th>
+          <th class="col-sla">SLA Status</th>
           <th class="col-agent">Assigned To</th>
           <th class="col-date">Created</th>
           <th class="col-actions">Admin Actions</th>
@@ -84,6 +85,9 @@
           </td>
           <td class="col-priority">
             <app-priority-badge [priority]="ticket.priority" />
+          </td>
+          <td class="col-sla">
+            <app-sla-badge [ticket]="ticket" [compact]="true"></app-sla-badge>
           </td>
           <td class="col-agent">
             <div class="reassign-wrapper">

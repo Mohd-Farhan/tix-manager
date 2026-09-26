@@ -40,12 +40,24 @@
         <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </div>
 
+      <!-- SLA Filter -->
+      <div class="select-wrapper">
+        <select [(ngModel)]="slaFilter" (ngModelChange)="onFilterChange()" class="filter-select">
+          <option value="ALL">All SLAs</option>
+          <option value="BREACHED">Breached</option>
+          <option value="WARNING">Approaching Breach</option>
+          <option value="OK">Within SLA</option>
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+
       <!-- Sorting -->
       <div class="select-wrapper">
         <select [(ngModel)]="sortBy" (ngModelChange)="onFilterChange()" class="filter-select">
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
           <option value="recently-updated">Recently updated</option>
+          <option value="sla-due-asc">SLA Deadline (Urgent First)</option>
           <option value="priority-desc">Priority (High → Low)</option>
           <option value="priority-asc">Priority (Low → High)</option>
         </select>
@@ -73,6 +85,7 @@
           <th class="col-customer">Customer</th>
           <th class="col-status">Status</th>
           <th class="col-priority">Priority</th>
+          <th class="col-sla">SLA Status</th>
           <th class="col-agent">Assigned To</th>
           <th class="col-date">Updated</th>
           <th class="col-action">Action</th>
@@ -101,6 +114,9 @@
               <span class="priority-indicator" [ngClass]="getPriorityClass(ticket.priority)"></span>
               <span>{{ ticket.priority }}</span>
             </div>
+          </td>
+          <td class="col-sla">
+            <app-sla-badge [ticket]="ticket" [compact]="true"></app-sla-badge>
           </td>
           <td class="col-agent">
             @if (ticket.assignedAgentName) {
