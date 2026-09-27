@@ -302,6 +302,65 @@ class UserServiceTest {
     }
 
     /**
+     * TEST CASE 7d: Direct sanitizeCsvFormula method tests covering all OWASP formula triggers and quotes.
+     */
+    @Test
+    @DisplayName("sanitizeCsvFormula — Strips =, +, -, @, \\t, \\r and quotes per OWASP CWE-1236")
+    void testSanitizeCsvFormula_AllCases() {
+        assertThat(userService.sanitizeCsvFormula("=cmd|' /C calc'!A0")).isEqualTo("cmd|' /C calc'!A0");
+        assertThat(userService.sanitizeCsvFormula("+12345")).isEqualTo("12345");
+        assertThat(userService.sanitizeCsvFormula("-sum(A1:A10)")).isEqualTo("sum(A1:A10)");
+        assertThat(userService.sanitizeCsvFormula("@SUM(1+1)*cmd|' /C calc'!A0")).isEqualTo("SUM(1+1)*cmd|' /C calc'!A0");
+        assertThat(userService.sanitizeCsvFormula("\t=evil")).isEqualTo("evil");
+        assertThat(userService.sanitizeCsvFormula("\r-calc")).isEqualTo("calc");
+        assertThat(userService.sanitizeCsvFormula("\"=quoted_formula\"")).isEqualTo("quoted_formula");
+        assertThat(userService.sanitizeCsvFormula("\"+quoted_agent\"")).isEqualTo("quoted_agent");
+        assertThat(userService.sanitizeCsvFormula("\"-quoted_user\"")).isEqualTo("quoted_user");
+        assertThat(userService.sanitizeCsvFormula("\"@quoted_admin\"")).isEqualTo("quoted_admin");
+        assertThat(userService.sanitizeCsvFormula("normal_username")).isEqualTo("normal_username");
+        assertThat(userService.sanitizeCsvFormula(null)).isNull();
+        assertThat(userService.sanitizeCsvFormula("")).isEqualTo("");
+    }
+
+    /**
+     * TEST CASE 7e: Single user creation also sanitizes formula injection characters.
+     */
+    @Test
+    @DisplayName("createUser — Sanitizes formula injection characters in username and email")
+    void testCreateUser_FormulaInjectionSanitized() {
+        User adminCaller = new User();
+        adminCaller.setId(2L);
+        adminCaller.setUsername("admin");
+        adminCaller.setRole(UserRole.ADMIN);
+
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(adminCaller));
+        when(userRepository.findByUsername("safe_agent")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("safe@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$hashed");
+
+        com.support.dto.CreateUserRequest request = com.support.dto.CreateUserRequest.builder()
+                .username("=safe_agent")
+                .email("+safe@example.com")
+                .role(UserRole.SUPPORT_AGENT)
+                .build();
+
+        User savedUser = new User();
+        savedUser.setId(10L);
+        savedUser.setUsername("safe_agent");
+        savedUser.setEmail("safe@example.com");
+        savedUser.setRole(UserRole.SUPPORT_AGENT);
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userMapper.toDTO(any(User.class))).thenReturn(new com.support.dto.UserDTO());
+
+        userService.createUser(request, "admin");
+
+        verify(userRepository).save(argThat(u ->
+                u.getUsername().equals("safe_agent") &&
+                u.getEmail().equals("safe@example.com")
+        ));
+    }
+
+    /**
      * TEST CASE 8: Soft Delete Hierarchy — Admin cannot deactivate another Admin.
      */
     @Test

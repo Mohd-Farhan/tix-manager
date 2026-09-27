@@ -92,8 +92,9 @@ public class UserService {
             throw new InvalidOperationException("Admins cannot create Admin or System Admin accounts.");
         }
 
-        String username = request.getUsername().trim();
-        String email = request.getEmail().trim();
+        // OWASP CWE-1236: Neutralize formula injection prefixes (=, +, -, @, \t, \r)
+        String username = sanitizeCsvFormula(request.getUsername());
+        String email = sanitizeCsvFormula(request.getEmail());
 
         if (userRepository.findByUsername(username).isPresent()) {
             throw new DuplicateResourceException("User", "username", username);
@@ -416,17 +417,23 @@ public class UserService {
     /**
      * OWASP CWE-1236: Defense-in-depth against CSV / Spreadsheet Formula Injection.
      * Prevents execution of malicious formulas (=, +, -, @, \t, \r) if user records
-     * are subsequently exported to spreadsheet software (Excel, LibreOffice).
+     * are subsequently exported to spreadsheet software (Excel, LibreOffice, Google Sheets).
+     *
+     * Handles:
+     * - Direct formula trigger prefixes: =cmd, +123, -calc, @sum
+     * - Quoted formula triggers: "=cmd", "\"-calc\""
+     * - Whitespace and tab/carriage-return prefix variants
      */
-    private String sanitizeCsvFormula(String input) {
-        if (input == null || input.isEmpty()) {
-            return input;
+    public String sanitizeCsvFormula(String input) {
+        if (input == null) {
+            return null;
         }
-        char first = input.charAt(0);
-        if (first == '=' || first == '+' || first == '-' || first == '@' || first == '\t' || first == '\r') {
-            // Neutralize by stripping leading formula control characters
-            return input.replaceFirst("^[=+\\-@\\t\\r]+", "");
+        String clean = input.trim();
+        // Strip surrounding double quotes if present (standard CSV quoting)
+        if (clean.length() >= 2 && clean.startsWith("\"") && clean.endsWith("\"")) {
+            clean = clean.substring(1, clean.length() - 1).trim();
         }
-        return input;
+        // Neutralize by stripping leading formula control characters (=, +, -, @, \t, \r)
+        return clean.replaceFirst("^[=+\\-@\\t\\r]+", "").trim();
     }
 }
