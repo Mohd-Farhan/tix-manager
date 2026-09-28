@@ -9,13 +9,14 @@ import { UserService } from '../../services/user.service';
 import { User, UserRole } from '../../models/user.model';
 import { TicketPriority } from '../../models/ticket.model';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
+import { ChangePasswordModalComponent } from '../../shared/components/change-password-modal/change-password-modal.component';
 
 export type ActiveModalType = 'profile' | 'preferences' | 'password' | 'create-ticket' | null;
 
 @Component({
   selector: 'app-customer-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent],
+  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent, ChangePasswordModalComponent],
   templateUrl: './customer-layout.component.html',
   styleUrl: './customer-layout.component.css',
 })
@@ -40,6 +41,14 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
 
   // Active modal window (top center of content area)
   activeModal: ActiveModalType = null;
+  isChangePasswordModalOpen = false;
+
+  openChangePasswordModal(): void {
+    this.closeProfileDropdown();
+    this.closeModal();
+    this.isChangePasswordModalOpen = true;
+    this.cdr.detectChanges();
+  }
 
   // Preferences state
   emailOnStatusChange = true;
@@ -133,6 +142,10 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
 
   openModal(type: ActiveModalType): void {
     this.closeProfileDropdown();
+    if (type === 'password') {
+      this.openChangePasswordModal();
+      return;
+    }
     this.activeModal = type;
     this.passwordMessage = '';
     this.currentPassword = '';

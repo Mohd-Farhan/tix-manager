@@ -113,4 +113,10 @@
       </div>
     </div>
   </div>
+
+  <app-change-password-modal
+    [isOpen]="isChangePasswordModalOpen"
+    [userId]="user.id"
+    (closed)="isChangePasswordModalOpen = false"
+  ></app-change-password-modal>
 </div>

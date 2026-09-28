@@ -105,13 +105,13 @@
               <span>Preferences</span>
             </button>
 
-            <button class="dropdown-item" (click)="openModal('password')" id="dropdown-password-opt">
+            <button class="dropdown-item" (click)="openChangePasswordModal()" id="dropdown-password-opt">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              <span>Update password</span>
+              <span>Change Password</span>
             </button>
           </div>
 
@@ -234,6 +234,26 @@
               <span class="field-label">Account Status</span>
               <span class="field-value status-active">Active</span>
             </div>
+          </div>
+
+          <!-- Password & Security Setting -->
+          <div class="profile-security-card" id="customer-profile-security-card">
+            <div class="security-card-header">
+              <div class="security-card-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+              <div class="security-card-info">
+                <h4 class="security-card-title">Password & Authentication</h4>
+                <p class="security-card-desc">Update your credentials to maintain security compliance.</p>
+              </div>
+            </div>
+            <button type="button" class="btn-change-password" (click)="openChangePasswordModal()" id="customer-profile-change-password-btn">
+              Change Password
+            </button>
           </div>
         </div>
         }
@@ -417,4 +437,11 @@
   <main class="page-content">
     <router-outlet />
   </main>
+
+  <!-- Dedicated Self-Service Change Password Modal -->
+  <app-change-password-modal
+    [isOpen]="isChangePasswordModalOpen"
+    [userId]="user.id"
+    (closed)="isChangePasswordModalOpen = false"
+  ></app-change-password-modal>
 </div>

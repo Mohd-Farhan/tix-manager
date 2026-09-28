@@ -6,13 +6,14 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { User, UserRole } from '../../models/user.model';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
+import { ChangePasswordModalComponent } from '../../shared/components/change-password-modal/change-password-modal.component';
 
 export type AdminModalType = 'profile' | 'preferences' | 'password' | null;
 
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent],
+  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent, ChangePasswordModalComponent],
   templateUrl: './admin-layout.component.html',
   styleUrl: './admin-layout.component.css',
 })
@@ -34,6 +35,14 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   profileDropdownOpen = false;
 
   activeModal: AdminModalType = null;
+  isChangePasswordModalOpen = false;
+
+  openChangePasswordModal(): void {
+    this.closeProfileDropdown();
+    this.closeModal();
+    this.isChangePasswordModalOpen = true;
+    this.cdr.detectChanges();
+  }
 
   // Preferences
   emailOnTicketCreate = true;
@@ -120,6 +129,10 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
   openModal(type: AdminModalType): void {
     this.closeProfileDropdown();
+    if (type === 'password') {
+      this.openChangePasswordModal();
+      return;
+    }
     this.activeModal = type;
     this.passwordMessage = '';
     this.currentPassword = '';

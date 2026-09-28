@@ -5,11 +5,12 @@ import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { UserService } from '../../../services/user.service';
 import { User, UserRole } from '../../../models/user.model';
+import { ChangePasswordModalComponent } from '../../../shared/components/change-password-modal/change-password-modal.component';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ChangePasswordModalComponent],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.css',
 })
@@ -25,6 +26,7 @@ export class ProfileComponent implements OnInit, AfterViewInit {
     role: UserRole.CUSTOMER
   };
   isDark = false;
+  isChangePasswordModalOpen = false;
 
   // Password form (mock only)
   currentPassword = '';

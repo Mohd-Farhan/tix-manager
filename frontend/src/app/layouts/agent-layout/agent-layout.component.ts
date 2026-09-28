@@ -6,13 +6,14 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { User, UserRole } from '../../models/user.model';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
+import { ChangePasswordModalComponent } from '../../shared/components/change-password-modal/change-password-modal.component';
 
 export type AgentModalType = 'profile' | 'preferences' | 'password' | null;
 
 @Component({
   selector: 'app-agent-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent],
+  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent, ChangePasswordModalComponent],
   templateUrl: './agent-layout.component.html',
   styleUrl: './agent-layout.component.css',
 })
@@ -35,6 +36,14 @@ export class AgentLayoutComponent implements OnInit, OnDestroy {
 
   // Modal
   activeModal: AgentModalType = null;
+  isChangePasswordModalOpen = false;
+
+  openChangePasswordModal(): void {
+    this.closeProfileDropdown();
+    this.closeModal();
+    this.isChangePasswordModalOpen = true;
+    this.cdr.detectChanges();
+  }
 
   // Preferences
   emailOnAssignment = true;
@@ -106,6 +115,10 @@ export class AgentLayoutComponent implements OnInit, OnDestroy {
 
   openModal(type: AgentModalType): void {
     this.closeProfileDropdown();
+    if (type === 'password') {
+      this.openChangePasswordModal();
+      return;
+    }
     this.activeModal = type;
     this.passwordMessage = '';
     this.currentPassword = '';
