@@ -33,6 +33,7 @@ export class UserManagementComponent implements OnInit {
   showAddUserModal = false;
   showBulkModal = false;
   isLoading = true;
+  readonly skeletonRows = [1, 2, 3, 4, 5, 6];
 
   // Pagination state
   currentPage = 1;

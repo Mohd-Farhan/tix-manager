@@ -28,6 +28,7 @@ export class TicketQueueComponent implements OnInit, OnDestroy {
   filteredTickets: Ticket[] = [];
   currentUserId = 0;
   isLoading = true;
+  readonly skeletonRows = [1, 2, 3, 4, 5, 6];
 
   // Filters
   searchTerm = '';

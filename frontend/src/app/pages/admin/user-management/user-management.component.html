@@ -2,7 +2,7 @@
   <div class="page-header">
     <div class="header-left">
       <h1 class="page-title">User Management</h1>
-      <p class="page-subtitle">{{ filteredUsers.length }} users found</p>
+      <p class="page-subtitle">{{ isLoading ? 'Loading user directory...' : (filteredUsers.length + ' users found') }}</p>
     </div>
     <div class="header-actions">
       <a routerLink="/admin/bulk-upload-history" class="btn-secondary history-btn" id="admin-bulk-history-btn">
@@ -37,7 +37,49 @@
 
   <!-- Users Table -->
   <div class="table-container">
-    @if (filteredUsers.length === 0) {
+    @if (isLoading) {
+    <table class="user-table skeleton-table" aria-busy="true" aria-label="Loading users">
+      <thead>
+        <tr>
+          <th class="col-id">ID</th>
+          <th class="col-name">Name</th>
+          <th class="col-email">Email</th>
+          <th class="col-role">Role</th>
+          <th class="col-created">Created</th>
+          <th class="col-status">Status</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of skeletonRows; track row) {
+        <tr class="user-row skeleton-row">
+          <td class="col-id"><span class="skeleton-bar shimmer" style="width: 32px;"></span></td>
+          <td class="col-name">
+            <div class="user-cell">
+              <span class="skeleton-circle shimmer" style="width: 28px; height: 28px;"></span>
+              <span class="skeleton-bar shimmer" [style.width.px]="85 + (row * 12) % 45"></span>
+            </div>
+          </td>
+          <td class="col-email">
+            <span class="skeleton-bar shimmer" [style.width.px]="130 + (row * 18) % 50"></span>
+          </td>
+          <td class="col-role">
+            <span class="skeleton-badge shimmer" style="width: 95px;"></span>
+          </td>
+          <td class="col-created">
+            <span class="skeleton-bar shimmer" style="width: 75px;"></span>
+          </td>
+          <td class="col-status">
+            <span class="skeleton-badge shimmer" style="width: 60px;"></span>
+          </td>
+          <td class="col-actions">
+            <span class="skeleton-circle shimmer" style="width: 28px; height: 28px; border-radius: 6px;"></span>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+    } @else if (filteredUsers.length === 0) {
     <app-empty-state
       icon='<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>'
       title="No users found"

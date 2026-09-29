@@ -185,3 +185,60 @@ body {
   background-color: var(--background);
   color: var(--on-background);
 }
+
+/* ================================================================
+   Shimmer & Skeleton Loaders (Azure Professional Narrative)
+   ================================================================ */
+@keyframes shimmerWave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-container) 0%,
+    var(--surface-container-highest) 45%,
+    var(--surface-container-high) 55%,
+    var(--surface-container) 100%
+  );
+  background-size: 250% 100%;
+  animation: shimmerWave 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.skeleton-bar {
+  display: inline-block;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  vertical-align: middle;
+}
+
+.skeleton-circle {
+  display: inline-block;
+  border-radius: var(--radius-full);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.skeleton-badge {
+  display: inline-block;
+  height: 22px;
+  border-radius: var(--radius-full);
+  vertical-align: middle;
+}
+
+.skeleton-row {
+  pointer-events: none;
+  cursor: default;
+  transition: opacity var(--transition-base);
+}
+
+.skeleton-row td {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+

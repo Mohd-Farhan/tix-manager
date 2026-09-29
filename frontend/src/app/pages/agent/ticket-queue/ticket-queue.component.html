@@ -2,7 +2,7 @@
   <div class="page-header">
     <div class="header-left">
       <h1 class="page-title">Ticket Queue</h1>
-      <p class="page-subtitle">{{ filteredTickets.length }} tickets found</p>
+      <p class="page-subtitle">{{ isLoading ? 'Loading ticket queue...' : (filteredTickets.length + ' tickets found') }}</p>
     </div>
   </div>
 
@@ -68,7 +68,60 @@
 
   <!-- Ticket Table -->
   <div class="table-container">
-    @if (filteredTickets.length === 0) {
+    @if (isLoading) {
+    <table class="ticket-table skeleton-table" aria-busy="true" aria-label="Loading tickets">
+      <thead>
+        <tr>
+          <th class="col-id">ID</th>
+          <th class="col-title">Ticket Title</th>
+          <th class="col-customer">Customer</th>
+          <th class="col-status">Status</th>
+          <th class="col-priority">Priority</th>
+          <th class="col-sla">SLA Status</th>
+          <th class="col-agent">Assigned To</th>
+          <th class="col-date">Updated</th>
+          <th class="col-action">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of skeletonRows; track row) {
+        <tr class="ticket-row skeleton-row">
+          <td class="col-id"><span class="skeleton-bar shimmer" style="width: 38px;"></span></td>
+          <td class="col-title">
+            <span class="skeleton-bar shimmer" [style.width.%]="50 + (row * 9) % 35" style="height: 15px;"></span>
+          </td>
+          <td class="col-customer">
+            <div class="user-cell">
+              <span class="skeleton-circle shimmer" style="width: 24px; height: 24px;"></span>
+              <span class="skeleton-bar shimmer" [style.width.px]="70 + (row * 10) % 35"></span>
+            </div>
+          </td>
+          <td class="col-status">
+            <span class="skeleton-badge shimmer" style="width: 75px;"></span>
+          </td>
+          <td class="col-priority">
+            <span class="skeleton-badge shimmer" style="width: 60px;"></span>
+          </td>
+          <td class="col-sla">
+            <span class="skeleton-badge shimmer" style="width: 90px;"></span>
+          </td>
+          <td class="col-agent">
+            <div class="user-cell">
+              <span class="skeleton-circle shimmer" style="width: 24px; height: 24px;"></span>
+              <span class="skeleton-bar shimmer" [style.width.px]="65 + (row * 8) % 30"></span>
+            </div>
+          </td>
+          <td class="col-date">
+            <span class="skeleton-bar shimmer" style="width: 65px;"></span>
+          </td>
+          <td class="col-action">
+            <span class="skeleton-bar shimmer" style="width: 45px;"></span>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+    } @else if (filteredTickets.length === 0) {
     <div class="empty-state">
       <div class="empty-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
