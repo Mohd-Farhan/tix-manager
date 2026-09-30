@@ -9,13 +9,14 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { ModalShellComponent } from '../../../shared/components/modal-shell/modal-shell.component';
 import { PaginationComponent, PageSizeOption } from '../../../shared/components/pagination/pagination.component';
 import { ToastService } from '../../../shared/services/toast.service';
+import { ConfirmDialogComponent } from '../../../shared';
 
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-admin-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, SearchBoxComponent, EmptyStateComponent, ModalShellComponent, PaginationComponent],
+  imports: [CommonModule, FormsModule, RouterLink, SearchBoxComponent, EmptyStateComponent, ModalShellComponent, PaginationComponent, ConfirmDialogComponent],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.css',
 })
@@ -34,6 +35,17 @@ export class UserManagementComponent implements OnInit {
   showBulkModal = false;
   isLoading = true;
   readonly skeletonRows = [1, 2, 3, 4, 5, 6];
+
+  // Confirm dialog state (Deactivate / Reactivate)
+  confirmDialog = {
+    visible: false,
+    title: '',
+    message: '',
+    confirmLabel: 'Confirm',
+    variant: 'danger' as 'danger' | 'default',
+    targetUserId: null as number | null,
+    targetAction: '' as 'deactivate' | 'reactivate',
+  };
 
   // Pagination state
   currentPage = 1;
@@ -292,9 +304,23 @@ export class UserManagementComponent implements OnInit {
     }
 
     const action = user?.status === 'active' ? 'deactivate' : 'reactivate';
-    if (!confirm(`Are you sure you want to ${action} user "${user?.username}"? This action can be reversed by an administrator.`)) {
-      return;
-    }
+    this.confirmDialog = {
+      visible: true,
+      title: `${action === 'deactivate' ? 'Deactivate' : 'Reactivate'} User`,
+      message: `Are you sure you want to ${action} user "${user?.username}"? This action can be reversed by an administrator.`,
+      confirmLabel: action === 'deactivate' ? 'Deactivate User' : 'Reactivate User',
+      variant: action === 'deactivate' ? 'danger' : 'default',
+      targetUserId: userId,
+      targetAction: action,
+    };
+  }
+
+  onConfirmToggleStatus(): void {
+    if (!this.confirmDialog.targetUserId) return;
+    const userId = this.confirmDialog.targetUserId;
+    const action = this.confirmDialog.targetAction;
+    this.confirmDialog.visible = false;
+    this.confirmDialog.targetUserId = null;
 
     this.userService.softDeleteUser(userId).subscribe({
       next: () => {
@@ -305,6 +331,11 @@ export class UserManagementComponent implements OnInit {
         this.toast.error(err.error?.message || `Failed to update status for user #${userId}.`);
       }
     });
+  }
+
+  onCancelConfirmToggle(): void {
+    this.confirmDialog.visible = false;
+    this.confirmDialog.targetUserId = null;
   }
 
   getRoleLabel(role: UserRole): string {

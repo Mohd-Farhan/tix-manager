@@ -265,4 +265,15 @@
       </button>
     </div>
   </app-modal-shell>
+
+  <!-- Confirm Deactivate / Reactivate Dialog -->
+  <app-confirm-dialog
+    [visible]="confirmDialog.visible"
+    [title]="confirmDialog.title"
+    [message]="confirmDialog.message"
+    [confirmLabel]="confirmDialog.confirmLabel"
+    [variant]="confirmDialog.variant"
+    (confirmed)="onConfirmToggleStatus()"
+    (cancelled)="onCancelConfirmToggle()">
+  </app-confirm-dialog>
 </div>

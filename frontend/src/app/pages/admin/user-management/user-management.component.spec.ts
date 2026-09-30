@@ -12,7 +12,7 @@ describe('UserManagementComponent (Skeleton Loading)', () => {
   let component: UserManagementComponent;
   let fixture: ComponentFixture<UserManagementComponent>;
   let usersSubject: Subject<User[]>;
-  let userServiceSpy: { getAllUsersAdmin: ReturnType<typeof vi.fn> };
+  let userServiceSpy: { getAllUsersAdmin: ReturnType<typeof vi.fn>; softDeleteUser: ReturnType<typeof vi.fn> };
   let authServiceSpy: { getCurrentUser: ReturnType<typeof vi.fn> };
   let toastServiceSpy: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
 
@@ -39,6 +39,7 @@ describe('UserManagementComponent (Skeleton Loading)', () => {
     usersSubject = new Subject<User[]>();
     userServiceSpy = {
       getAllUsersAdmin: vi.fn().mockReturnValue(usersSubject),
+      softDeleteUser: vi.fn().mockReturnValue(new Subject<void>()),
     };
     authServiceSpy = {
       getCurrentUser: vi.fn().mockReturnValue({
@@ -108,5 +109,54 @@ describe('UserManagementComponent (Skeleton Loading)', () => {
 
     expect(skeletonTable).toBeNull();
     expect(emptyState).toBeTruthy();
+  });
+
+  describe('Confirm Dialog for Deactivate/Reactivate', () => {
+    it('should open confirm dialog instead of native confirm when toggleStatus is invoked', () => {
+      fixture.detectChanges();
+      usersSubject.next(mockUsers);
+      fixture.detectChanges();
+
+      expect(component.confirmDialog.visible).toBe(false);
+
+      // Trigger toggleStatus for user #2 (agent_smith, active)
+      component.toggleStatus(2);
+
+      expect(component.confirmDialog.visible).toBe(true);
+      expect(component.confirmDialog.targetUserId).toBe(2);
+      expect(component.confirmDialog.title).toBe('Deactivate User');
+      expect(component.confirmDialog.variant).toBe('danger');
+      expect(userServiceSpy.softDeleteUser).not.toHaveBeenCalled();
+    });
+
+    it('should invoke softDeleteUser on confirm and reset dialog state', () => {
+      fixture.detectChanges();
+      usersSubject.next(mockUsers);
+      fixture.detectChanges();
+
+      component.toggleStatus(2);
+      expect(component.confirmDialog.visible).toBe(true);
+
+      component.onConfirmToggleStatus();
+
+      expect(userServiceSpy.softDeleteUser).toHaveBeenCalledWith(2);
+      expect(component.confirmDialog.visible).toBe(false);
+      expect(component.confirmDialog.targetUserId).toBeNull();
+    });
+
+    it('should dismiss dialog on cancel without invoking softDeleteUser', () => {
+      fixture.detectChanges();
+      usersSubject.next(mockUsers);
+      fixture.detectChanges();
+
+      component.toggleStatus(2);
+      expect(component.confirmDialog.visible).toBe(true);
+
+      component.onCancelConfirmToggle();
+
+      expect(component.confirmDialog.visible).toBe(false);
+      expect(component.confirmDialog.targetUserId).toBeNull();
+      expect(userServiceSpy.softDeleteUser).not.toHaveBeenCalled();
+    });
   });
 });

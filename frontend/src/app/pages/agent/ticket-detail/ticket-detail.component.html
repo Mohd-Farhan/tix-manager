@@ -361,3 +361,15 @@
   </div>
 </div>
 }
+
+<!-- Confirm Delete Attachment Dialog -->
+<app-confirm-dialog
+  [visible]="deleteConfirm.visible"
+  title="Delete Attachment"
+  [message]="'Are you sure you want to permanently delete \'' + (deleteConfirm.attachment?.fileName || 'this file') + '\'? This action cannot be undone.'"
+  confirmLabel="Delete"
+  cancelLabel="Cancel"
+  variant="danger"
+  (confirmed)="onConfirmDeleteAttachment()"
+  (cancelled)="onCancelDeleteAttachment()">
+</app-confirm-dialog>

@@ -10,12 +10,12 @@ import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.mod
 import { Message } from '../../../models/message.model';
 import { AttachmentResponse } from '../../../models/attachment.model';
 
-import { SlaBadgeComponent } from '../../../shared';
+import { SlaBadgeComponent, ConfirmDialogComponent } from '../../../shared';
 
 @Component({
   selector: 'app-ticket-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, SlaBadgeComponent],
+  imports: [CommonModule, RouterLink, FormsModule, SlaBadgeComponent, ConfirmDialogComponent],
   templateUrl: './ticket-detail.component.html',
   styleUrl: './ticket-detail.component.css',
 })
@@ -44,6 +44,12 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
 
   selectedFile: File | null = null;
   selectedPreviewAttachment: AttachmentResponse | null = null;
+
+  // Confirm delete attachment dialog
+  deleteConfirm = {
+    visible: false,
+    attachment: null as AttachmentResponse | null,
+  };
 
   private shouldScroll = false;
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -220,7 +226,17 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
 
   deleteAttachment(attachment: AttachmentResponse): void {
     if (!this.ticket) return;
-    if (!confirm(`Are you sure you want to permanently delete '${attachment.fileName}'?`)) return;
+    this.deleteConfirm = {
+      visible: true,
+      attachment,
+    };
+  }
+
+  onConfirmDeleteAttachment(): void {
+    const attachment = this.deleteConfirm.attachment;
+    if (!this.ticket || !attachment) return;
+    this.deleteConfirm.visible = false;
+    this.deleteConfirm.attachment = null;
 
     this.attachmentService.deleteAttachment(this.ticket.id, attachment.id).subscribe({
       next: () => {
@@ -236,6 +252,11 @@ export class TicketDetailComponent implements OnInit, AfterViewChecked {
         this.toastService.show(msg, 'error');
       }
     });
+  }
+
+  onCancelDeleteAttachment(): void {
+    this.deleteConfirm.visible = false;
+    this.deleteConfirm.attachment = null;
   }
 
   canDelete(attachment: AttachmentResponse): boolean {
