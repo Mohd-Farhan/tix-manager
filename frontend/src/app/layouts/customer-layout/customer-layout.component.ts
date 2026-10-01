@@ -8,6 +8,7 @@ import { TicketService } from '../../services/ticket.service';
 import { UserService } from '../../services/user.service';
 import { User, UserRole } from '../../models/user.model';
 import { TicketPriority } from '../../models/ticket.model';
+import { ThemeService } from '../../services/theme.service';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
 import { ChangePasswordModalComponent } from '../../shared/components/change-password-modal/change-password-modal.component';
 
@@ -25,6 +26,7 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
   private ticketService = inject(TicketService);
   private userService = inject(UserService);
   private router = inject(Router);
+  private themeService = inject(ThemeService);
   private elementRef = inject(ElementRef);
   private cdr = inject(ChangeDetectorRef);
   private subscription = new Subscription();
@@ -35,7 +37,9 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
     email: '',
     role: UserRole.CUSTOMER
   };
-  isDark = false;
+  get isDark(): boolean {
+    return this.themeService.isDark();
+  }
   sidebarOpen = false;
   profileDropdownOpen = false;
 
@@ -94,9 +98,6 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
     if (currentUser) {
       this.user = currentUser;
     }
-    const savedTheme = localStorage.getItem('tix-theme');
-    this.isDark = savedTheme === 'dark';
-    this.applyTheme();
 
     this.subscription.add(
       this.ticketService.openCreateTicket$.subscribe(() => {
@@ -111,9 +112,7 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
   }
 
   toggleTheme(): void {
-    this.isDark = !this.isDark;
-    this.applyTheme();
-    localStorage.setItem('tix-theme', this.isDark ? 'dark' : 'light');
+    this.themeService.toggleTheme();
     this.cdr.detectChanges();
   }
 
@@ -294,7 +293,4 @@ export class CustomerLayoutComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  private applyTheme(): void {
-    document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
-  }
 }

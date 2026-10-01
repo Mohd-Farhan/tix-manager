@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
+import { ThemeService } from '../../services/theme.service';
 
 export interface FloatingWaterIcon {
   src: string;
@@ -36,6 +37,7 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   private router = inject(Router);
   private ngZone = inject(NgZone);
   private sanitizer = inject(DomSanitizer);
+  private themeService = inject(ThemeService);
 
   @ViewChild('waterCanvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('heroSection', { static: true }) heroRef!: ElementRef<HTMLElement>;
@@ -52,7 +54,9 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   private touchMoveHandler: (e: TouchEvent) => void = () => { };
   private touchEndHandler: (e: TouchEvent) => void = () => { };
 
-  isDark = false;
+  get isDark(): boolean {
+    return this.themeService.isDark();
+  }
   currentYear = new Date().getFullYear();
 
   /* Floating icons in water */
@@ -210,25 +214,10 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
     ];
   }
 
-  ngOnInit(): void {
-    const savedTheme = localStorage.getItem('tix-theme');
-    this.isDark = savedTheme === 'dark';
-    this.applyTheme();
-  }
+  ngOnInit(): void {}
 
   toggleTheme(): void {
-    this.isDark = !this.isDark;
-    this.applyTheme();
-    localStorage.setItem('tix-theme', this.isDark ? 'dark' : 'light');
-  }
-
-  private applyTheme(): void {
-    document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
-    if (this.isDark) {
-      document.body.classList.add('dark-theme');
-    } else {
-      document.body.classList.remove('dark-theme');
-    }
+    this.themeService.toggleTheme();
   }
 
   ngAfterViewInit(): void {

@@ -70,6 +70,7 @@ class UserServiceTest {
     private UserService userService;
 
     private User user;
+    
     private UserDTO userDTO;
 
     @BeforeEach

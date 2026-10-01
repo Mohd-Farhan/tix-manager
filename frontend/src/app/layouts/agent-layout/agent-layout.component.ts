@@ -5,6 +5,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { User, UserRole } from '../../models/user.model';
+import { ThemeService } from '../../services/theme.service';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
 import { ChangePasswordModalComponent } from '../../shared/components/change-password-modal/change-password-modal.component';
 
@@ -20,6 +21,7 @@ export type AgentModalType = 'profile' | 'preferences' | 'password' | null;
 export class AgentLayoutComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private router = inject(Router);
+  private themeService = inject(ThemeService);
   private elementRef = inject(ElementRef);
   private cdr = inject(ChangeDetectorRef);
   private subscription = new Subscription();
@@ -30,7 +32,9 @@ export class AgentLayoutComponent implements OnInit, OnDestroy {
     email: '',
     role: UserRole.SUPPORT_AGENT
   };
-  isDark = false;
+  get isDark(): boolean {
+    return this.themeService.isDark();
+  }
   sidebarOpen = false;
   profileDropdownOpen = false;
 
@@ -76,9 +80,6 @@ export class AgentLayoutComponent implements OnInit, OnDestroy {
     if (currentUser) {
       this.user = currentUser;
     }
-    const savedTheme = localStorage.getItem('tix-theme');
-    this.isDark = savedTheme === 'dark';
-    this.applyTheme();
   }
 
   ngOnDestroy(): void {
@@ -86,9 +87,7 @@ export class AgentLayoutComponent implements OnInit, OnDestroy {
   }
 
   toggleTheme(): void {
-    this.isDark = !this.isDark;
-    this.applyTheme();
-    localStorage.setItem('tix-theme', this.isDark ? 'dark' : 'light');
+    this.themeService.toggleTheme();
     this.cdr.detectChanges();
   }
 
@@ -207,7 +206,4 @@ export class AgentLayoutComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  private applyTheme(): void {
-    document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
-  }
 }

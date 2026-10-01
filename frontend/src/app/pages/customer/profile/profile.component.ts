@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { ThemeService } from '../../../services/theme.service';
 import { UserService } from '../../../services/user.service';
 import { User, UserRole } from '../../../models/user.model';
 import { ChangePasswordModalComponent } from '../../../shared/components/change-password-modal/change-password-modal.component';
@@ -16,6 +17,7 @@ import { ChangePasswordModalComponent } from '../../../shared/components/change-
 })
 export class ProfileComponent implements OnInit, AfterViewInit {
   private authService = inject(AuthService);
+  private themeService = inject(ThemeService);
   private userService = inject(UserService);
   private route = inject(ActivatedRoute);
 
@@ -25,7 +27,9 @@ export class ProfileComponent implements OnInit, AfterViewInit {
     email: '',
     role: UserRole.CUSTOMER
   };
-  isDark = false;
+  get isDark(): boolean {
+    return this.themeService.isDark();
+  }
   isChangePasswordModalOpen = false;
 
   // Password form (mock only)
@@ -42,7 +46,6 @@ export class ProfileComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     const u = this.authService.getCurrentUser();
     if (u) this.user = u;
-    this.isDark = localStorage.getItem('tix-theme') === 'dark';
   }
 
   ngAfterViewInit(): void {
@@ -83,9 +86,7 @@ export class ProfileComponent implements OnInit, AfterViewInit {
   }
 
   toggleTheme(): void {
-    this.isDark = !this.isDark;
-    document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
-    localStorage.setItem('tix-theme', this.isDark ? 'dark' : 'light');
+    this.themeService.toggleTheme();
   }
 
   updatePassword(): void {

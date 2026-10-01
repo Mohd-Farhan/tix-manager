@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../services/auth.service';
+import { ThemeService } from '../../../services/theme.service';
 import { UserService } from '../../../services/user.service';
 import { ToastService } from '../../../services/toast.service';
 import { UserRole } from '../../../models/user.model';
@@ -26,6 +27,7 @@ export class LoginComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private authService = inject(AuthService);
+  private themeService = inject(ThemeService);
   private userService = inject(UserService);
   private toast = inject(ToastService);
 
@@ -38,7 +40,9 @@ export class LoginComponent implements OnInit {
 
   isLoading = false;
   errorMessage = '';
-  isDark = false;
+  get isDark(): boolean {
+    return this.themeService.isDark();
+  }
 
   // NIST first-login password remediation state
   forceChangeMode = false;
@@ -68,10 +72,6 @@ export class LoginComponent implements OnInit {
         }
       }
     });
-
-    const savedTheme = localStorage.getItem('tix-theme');
-    this.isDark = savedTheme === 'dark';
-    document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
   }
 
   togglePassword(): void {
@@ -87,9 +87,7 @@ export class LoginComponent implements OnInit {
   }
 
   toggleTheme(): void {
-    this.isDark = !this.isDark;
-    document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
-    localStorage.setItem('tix-theme', this.isDark ? 'dark' : 'light');
+    this.themeService.toggleTheme();
   }
 
   onSubmit(): void {
