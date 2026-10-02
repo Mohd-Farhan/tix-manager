@@ -30,27 +30,36 @@ import { CommonModule } from '@angular/common';
   styles: [`
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       display: flex; justify-content: center; align-items: flex-start;
       padding-top: 5vh; z-index: 1100;
       animation: overlayFadeIn 0.2s ease-out;
     }
     @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     .modal-window {
-      background: var(--surface-container-low); border: 1px solid var(--outline-variant);
+      background: color-mix(in srgb, var(--surface-container-low) 88%, transparent);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid color-mix(in srgb, var(--outline-variant) 75%, transparent);
       border-radius: var(--radius-xl, 16px); width: 92%;
-      box-shadow: 0 32px 64px rgba(0,0,0,0.2); overflow: hidden;
-      animation: modalSlideDown 0.3s ease-out;
+      box-shadow: 0 32px 72px rgba(0,0,0,0.28); overflow: hidden;
+      animation: modalSlideDown 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .modal-sm { max-width: 420px; }
     .modal-md { max-width: 520px; }
     .modal-lg { max-width: 720px; }
     .modal-xl { max-width: 900px; }
-    @keyframes modalSlideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes modalSlideDown {
+      from { opacity: 0; transform: translateY(-16px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
     .modal-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--outline-variant);
-      background: var(--surface-container);
+      background: color-mix(in srgb, var(--surface-container) 75%, transparent);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
     .modal-title-group { display: flex; align-items: center; gap: 0.75rem; }
     .modal-icon {

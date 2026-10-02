@@ -155,18 +155,27 @@
 .ticket-card {
   display: block;
   padding: 1.25rem 1.5rem;
-  background: var(--surface-container-low);
-  border: 1px solid var(--outline-variant);
+  background: color-mix(in srgb, var(--surface-container-low) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 70%, transparent);
   border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   text-decoration: none;
   color: inherit;
+  animation: cardEntrance 0.25s ease-out;
 }
 
 .ticket-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  border-color: color-mix(in srgb, var(--blue-500) 25%, var(--outline-variant));
+  border-color: color-mix(in srgb, var(--blue-500) 40%, transparent);
+}
+
+.ticket-card.skeleton-card {
+  pointer-events: none;
+  opacity: 0.85;
 }
 
 .ticket-card-header {
@@ -185,7 +194,8 @@
 
 .ticket-badges {
   display: flex;
-  gap: 0.375rem;
+  align-items: center;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -215,7 +225,7 @@
   gap: 1rem;
 }
 
-what are the thi .meta-date,
+.meta-date,
 .meta-agent {
   display: flex;
   align-items: center;

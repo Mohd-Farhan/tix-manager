@@ -31,18 +31,25 @@ import { CommonModule } from '@angular/common';
   styles: [`
     .confirm-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       display: flex; justify-content: center; align-items: center; z-index: 1100;
       animation: overlayIn 0.2s ease-out;
     }
     @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
     .confirm-modal {
-      background: var(--surface-container-low); border: 1px solid var(--outline-variant);
+      background: color-mix(in srgb, var(--surface-container-low) 88%, transparent);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid color-mix(in srgb, var(--outline-variant) 75%, transparent);
       border-radius: var(--radius-xl, 16px); max-width: 420px; width: 92%;
-      box-shadow: 0 32px 64px rgba(0,0,0,0.2); overflow: hidden;
-      animation: modalIn 0.3s ease-out;
+      box-shadow: 0 32px 72px rgba(0,0,0,0.28); overflow: hidden;
+      animation: modalIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    @keyframes modalIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
     .confirm-content { padding: 2rem; text-align: center; }
     .confirm-icon { margin-bottom: 1rem; }
     .confirm-icon.danger { color: var(--error, #ba1a1a); }

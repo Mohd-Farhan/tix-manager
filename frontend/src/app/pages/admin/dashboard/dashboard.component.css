@@ -19,8 +19,10 @@
 
 .stat-card {
   position: relative;
-  background: var(--surface-container-low);
-  border: 1px solid var(--outline-variant);
+  background: color-mix(in srgb, var(--surface-container-low) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 70%, transparent);
   border-radius: var(--radius-xl);
   padding: 1.5rem;
   display: flex;
@@ -32,7 +34,11 @@
   cursor: pointer;
   overflow: hidden;
 }
-.stat-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); border-color: var(--outline); }
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+  border-color: color-mix(in srgb, var(--blue-500) 40%, transparent);
+}
 
 .stat-icon {
   width: 48px; height: 48px; border-radius: 14px;
@@ -55,15 +61,25 @@
 
 /* Panel */
 .panel {
-  background: var(--surface-container-low);
-  border: 1px solid var(--outline-variant);
+  background: color-mix(in srgb, var(--surface-container-low) 85%, transparent);
+  backdrop-filter: blur(16px) saturate(170%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 75%, transparent);
   border-radius: var(--radius-xl);
-  display: flex; flex-direction: column; overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 .panel-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--outline-variant);
-  background: var(--surface-container); flex-wrap: wrap; gap: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--outline-variant);
+  background: color-mix(in srgb, var(--surface-container) 80%, transparent);
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 .panel-title {
   font-size: 1.0625rem; font-weight: 700; color: var(--on-surface);
