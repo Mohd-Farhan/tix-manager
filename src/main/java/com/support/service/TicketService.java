@@ -11,6 +11,7 @@ import com.support.mapper.MessageMapper;
 import com.support.mapper.TicketMapper;
 import com.support.mapper.TicketStatusHistoryMapper;
 import com.support.repository.*;
+import com.support.state.TicketStateFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -75,6 +76,9 @@ public class TicketService {
     @Autowired
     private SlaService slaService;
 
+    @Autowired
+    private TicketStateFactory ticketStateFactory;
+
     /**
      * MUTATION: Create a new support ticket and record initial audit history.
      */
@@ -132,15 +136,15 @@ public class TicketService {
         if (agent.getRole() != UserRole.SUPPORT_AGENT) {
             throw new InvalidOperationException("User is not an agent.");
         }
-        ticket.setAssignedAgent(agent);
-        ticket.setStatus(TicketStatus.IN_PROGRESS);
+        // GOF STATE PATTERN: Delegate assignment logic to current state handler
+        ticketStateFactory.applyAssignment(ticket, agent);
         ticketRepository.save(ticket);
         auditService.recordEntityChange("TICKET", ticket.getId(), "ASSIGN", agent.getUsername(),
                 "Ticket assigned to agent '" + agent.getUsername() + "'");
         log.info("Ticket id={} assigned to agent id={}", ticketId, agentId);
 
         TicketStatusHistory history = new TicketStatusHistory();
-        history.setNewStatus(TicketStatus.IN_PROGRESS);
+        history.setNewStatus(ticket.getStatus());
         history.setPreviousStatus(previousStatus);
         history.setTicket(ticket);
         history.setChangedBy(agent);
@@ -166,22 +170,9 @@ public class TicketService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", changedByUserId));
 
         TicketStatus oldStatus = ticket.getStatus();
-        ticket.setStatus(newStatus);
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
 
-        // SLA Lifecycle state management:
-        if (newStatus == TicketStatus.RESOLVED) {
-            ticket.setResolvedAt(now);
-            if (ticket.getSlaDueAt() != null && now.isAfter(ticket.getSlaDueAt())) {
-                ticket.setSlaBreached(true);
-            }
-        } else if (oldStatus == TicketStatus.RESOLVED) {
-            // Ticket reopened from RESOLVED
-            ticket.setResolvedAt(null);
-            if (ticket.getSlaDueAt() != null) {
-                ticket.setSlaBreached(now.isAfter(ticket.getSlaDueAt()));
-            }
-        }
+        // GOF STATE PATTERN: Delegate validation and state-specific business side effects (e.g. SLA)
+        ticketStateFactory.applyTransition(ticket, newStatus, changedBy);
 
         ticketRepository.save(ticket);
         auditService.recordEntityChange("TICKET", ticket.getId(), "STATUS_CHANGE", changedBy.getUsername(),

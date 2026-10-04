@@ -25,6 +25,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.mockito.Spy;
+import com.support.exception.InvalidStateTransitionException;
+import com.support.state.TicketStateFactory;
+
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -70,6 +74,9 @@ class TicketServiceTest {
 
     @Mock
     private SlaService slaService;
+
+    @Spy
+    private TicketStateFactory ticketStateFactory = new TicketStateFactory();
 
     @InjectMocks
     private TicketService ticketService;
@@ -276,6 +283,7 @@ class TicketServiceTest {
     @Test
     @DisplayName("updateTicketStatus — Transition to RESOLVED freezes SLA and records resolvedAt")
     void testUpdateTicketStatus_ResolvedFreezesSla() {
+        ticket.setStatus(TicketStatus.IN_PROGRESS); // State Pattern: Must be IN_PROGRESS before transitioning to RESOLVED
         ticket.setSlaDueAt(LocalDateTime.now().plusHours(2)); // Still within SLA
         when(ticketRepository.findById(100L)).thenReturn(Optional.of(ticket));
         when(userRepository.findById(2L)).thenReturn(Optional.of(agent));
@@ -309,5 +317,22 @@ class TicketServiceTest {
         assertThat(ticket.getSlaDueAt()).isEqualTo(newDueAt);
         verify(ticketRepository).save(ticket);
         verify(auditService).recordEntityChange(eq("TICKET"), eq(100L), eq("PRIORITY_CHANGE"), eq("priya_agent"), any());
+    }
+
+    /**
+     * TEST CASE 9: State Pattern enforces transition rules — OPEN to RESOLVED is blocked.
+     */
+    @Test
+    @DisplayName("updateTicketStatus — Throw InvalidStateTransitionException when jumping from OPEN to RESOLVED")
+    void testUpdateTicketStatus_InvalidTransition_ThrowsException() {
+        // Arrange: ticket is OPEN by default
+        when(ticketRepository.findById(100L)).thenReturn(Optional.of(ticket));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(agent));
+
+        // Act & Assert
+        assertThatThrownBy(() -> ticketService.updateTicketStatus(100L, TicketStatus.RESOLVED, 2L))
+                .isInstanceOf(InvalidStateTransitionException.class)
+                .hasMessageContaining("Tickets in OPEN state cannot be directly resolved");
+        verify(ticketRepository, never()).save(any(Ticket.class));
     }
 }
