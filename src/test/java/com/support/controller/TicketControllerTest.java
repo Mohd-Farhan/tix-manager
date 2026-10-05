@@ -9,6 +9,7 @@ import com.support.dto.TicketResponse;
 import com.support.entity.TicketPriority;
 import com.support.entity.TicketStatus;
 import com.support.service.TicketService;
+import com.support.strategy.routing.RoutingStrategyType;
 import com.support.util.SecurityUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -132,6 +133,28 @@ class TicketControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(10))
                 .andExpect(jsonPath("$.assignedAgentId").value(3))
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+    }
+
+    /**
+     * TEST CASE: Auto-assign ticket using Strategy Pattern returns 200 OK.
+     */
+    @Test
+    @DisplayName("PUT /api/tickets/{id}/auto-assign — Auto-assign ticket to optimal agent via strategy")
+    void testAutoAssignTicket_Success() throws Exception {
+        TicketResponse autoAssignedResponse = TicketResponse.builder()
+                .id(10L)
+                .status(TicketStatus.IN_PROGRESS)
+                .assignedAgentId(5L)
+                .build();
+
+        when(ticketService.autoAssignTicket(10L, RoutingStrategyType.WORKLOAD_BALANCED))
+                .thenReturn(autoAssignedResponse);
+
+        mockMvc.perform(put("/api/tickets/10/auto-assign?strategy=WORKLOAD_BALANCED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.assignedAgentId").value(5))
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
     }
 

@@ -12,6 +12,7 @@ import com.support.mapper.TicketMapper;
 import com.support.mapper.TicketStatusHistoryMapper;
 import com.support.repository.*;
 import com.support.state.TicketStateFactory;
+import com.support.strategy.routing.RoutingStrategyType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -78,6 +79,9 @@ public class TicketService {
 
     @Autowired
     private TicketStateFactory ticketStateFactory;
+
+    @Autowired
+    private TicketRoutingService ticketRoutingService;
 
     /**
      * MUTATION: Create a new support ticket and record initial audit history.
@@ -156,6 +160,25 @@ public class TicketService {
         }
 
         return ticketMapper.toResponse(ticket);
+    }
+
+    /**
+     * MUTATION: Automatically assign a ticket using Strategy Pattern routing.
+     * Selects an optimal agent based on workload, round-robin, or priority rules,
+     * then executes state pattern assignment.
+     */
+    @Transactional
+    public TicketResponse autoAssignTicket(Long ticketId, RoutingStrategyType strategyType) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
+
+        // Use Strategy Pattern to resolve the best agent
+        User bestAgent = ticketRoutingService.resolveAgent(ticket, strategyType);
+
+        log.info("Auto-assigning ticket id={} to agent id={} using strategy={}", ticketId, bestAgent.getId(), strategyType);
+
+        // Delegate to assignTicket, which executes GoF State Pattern lifecycle transition
+        return assignTicket(ticketId, bestAgent.getId());
     }
 
     /**

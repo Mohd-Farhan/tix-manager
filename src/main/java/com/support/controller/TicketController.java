@@ -10,6 +10,7 @@ import com.support.dto.TicketStatusHistoryDTO;
 import com.support.entity.TicketStatus;
 import com.support.service.SlaService;
 import com.support.service.TicketService;
+import com.support.strategy.routing.RoutingStrategyType;
 import com.support.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -185,6 +186,23 @@ public class TicketController {
             @RequestParam Long agentId) {
         log.info("REST: Assigning ticket id={} to agent id={}", ticketId, agentId);
         TicketResponse ticket = ticketService.assignTicket(ticketId, agentId);
+        return ResponseEntity.status(HttpStatus.OK).body(ticket);
+    }
+
+    @Operation(summary = "Auto-assign ticket using Strategy Pattern", description = "Selects an optimal agent using the specified strategy (WORKLOAD_BALANCED, ROUND_ROBIN, PRIORITY_BASED) and assigns the ticket.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ticket auto-assigned successfully"),
+            @ApiResponse(responseCode = "400", description = "No available agents or invalid ticket state"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires SUPPORT_AGENT or ADMIN role"),
+            @ApiResponse(responseCode = "404", description = "Ticket not found")
+    })
+    @PutMapping("/{ticketId}/auto-assign")
+    @PreAuthorize("hasRole('SUPPORT_AGENT') or hasRole('ADMIN')")
+    public ResponseEntity<TicketResponse> autoAssignTicket(
+            @PathVariable Long ticketId,
+            @RequestParam(required = false, defaultValue = "WORKLOAD_BALANCED") RoutingStrategyType strategy) {
+        log.info("REST: Auto-assigning ticket id={} using strategy={}", ticketId, strategy);
+        TicketResponse ticket = ticketService.autoAssignTicket(ticketId, strategy);
         return ResponseEntity.status(HttpStatus.OK).body(ticket);
     }
 

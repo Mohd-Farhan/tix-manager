@@ -46,6 +46,13 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     @EntityGraph(attributePaths = { "customer" })
     Page<Ticket> findByAssignedAgentId(Long agentId, Pageable pageable);
 
+    /**
+     * WORKLOAD QUERY: Count active tickets (OPEN or IN_PROGRESS) assigned to a given agent.
+     * Used by WorkloadBalancedRoutingStrategy to balance ticket assignments across the support team.
+     */
+    @Query("SELECT COUNT(t) FROM Ticket t WHERE t.assignedAgent.id = :agentId AND t.status IN ('OPEN', 'IN_PROGRESS')")
+    long countActiveTicketsByAgentId(@Param("agentId") Long agentId);
+
     List<Ticket> findByStatus(TicketStatus status);
 
     Page<Ticket> findByStatus(TicketStatus status, Pageable pageable);

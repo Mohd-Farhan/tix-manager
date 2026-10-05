@@ -75,6 +75,9 @@ class TicketServiceTest {
     @Mock
     private SlaService slaService;
 
+    @Mock
+    private TicketRoutingService ticketRoutingService;
+
     @Spy
     private TicketStateFactory ticketStateFactory = new TicketStateFactory();
 
@@ -334,5 +337,34 @@ class TicketServiceTest {
                 .isInstanceOf(InvalidStateTransitionException.class)
                 .hasMessageContaining("Tickets in OPEN state cannot be directly resolved");
         verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    /**
+     * TEST CASE 10: Auto-assign ticket using Strategy Pattern routing resolves agent and transitions ticket.
+     */
+    @Test
+    @DisplayName("autoAssignTicket — Successfully assigns agent picked by routing strategy")
+    void testAutoAssignTicket_Success() {
+        when(ticketRepository.findById(100L)).thenReturn(Optional.of(ticket));
+        when(ticketRoutingService.resolveAgent(ticket, com.support.strategy.routing.RoutingStrategyType.WORKLOAD_BALANCED))
+                .thenReturn(agent);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(agent));
+        when(ticketRepository.save(any(Ticket.class))).thenReturn(ticket);
+        when(historyRepository.save(any(TicketStatusHistory.class))).thenReturn(new TicketStatusHistory());
+
+        TicketResponse inProgressResponse = TicketResponse.builder()
+                .id(100L)
+                .status(TicketStatus.IN_PROGRESS)
+                .assignedAgentId(2L)
+                .build();
+        when(ticketMapper.toResponse(ticket)).thenReturn(inProgressResponse);
+
+        TicketResponse result = ticketService.autoAssignTicket(100L, com.support.strategy.routing.RoutingStrategyType.WORKLOAD_BALANCED);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo(TicketStatus.IN_PROGRESS);
+        assertThat(ticket.getAssignedAgent()).isEqualTo(agent);
+        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.IN_PROGRESS);
+        verify(ticketRoutingService).resolveAgent(ticket, com.support.strategy.routing.RoutingStrategyType.WORKLOAD_BALANCED);
     }
 }
