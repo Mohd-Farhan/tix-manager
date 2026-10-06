@@ -10,6 +10,12 @@ export enum TicketPriority {
   HIGH = 'HIGH',
 }
 
+export enum RoutingStrategyType {
+  WORKLOAD_BALANCED = 'WORKLOAD_BALANCED',
+  ROUND_ROBIN = 'ROUND_ROBIN',
+  PRIORITY_BASED = 'PRIORITY_BASED',
+}
+
 export interface Ticket {
   id: number;
   title: string;

@@ -159,6 +159,28 @@ class TicketControllerTest {
     }
 
     /**
+     * TEST CASE: Auto-assign all unassigned tickets returns 200 OK with list of assigned tickets.
+     */
+    @Test
+    @DisplayName("POST /api/tickets/auto-assign-unassigned — Batch auto-assign all unassigned tickets")
+    void testAutoAssignAllUnassigned_Success() throws Exception {
+        TicketResponse autoAssignedResponse = TicketResponse.builder()
+                .id(10L)
+                .status(TicketStatus.IN_PROGRESS)
+                .assignedAgentId(5L)
+                .build();
+
+        when(ticketService.autoAssignAllUnassigned(RoutingStrategyType.WORKLOAD_BALANCED))
+                .thenReturn(List.of(autoAssignedResponse));
+
+        mockMvc.perform(post("/api/tickets/auto-assign-unassigned?strategy=WORKLOAD_BALANCED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(10))
+                .andExpect(jsonPath("$[0].assignedAgentId").value(5))
+                .andExpect(jsonPath("$[0].status").value("IN_PROGRESS"));
+    }
+
+    /**
      * TEST CASE 4: Post message to ticket thread returns 201 Created.
      */
     @Test

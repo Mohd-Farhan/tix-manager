@@ -182,6 +182,30 @@ public class TicketService {
     }
 
     /**
+     * MUTATION: Automatically assign all unassigned open tickets using Strategy Pattern routing.
+     * Evaluates all unassigned OPEN tickets and routes each to the optimal agent.
+     */
+    @Transactional
+    public List<TicketResponse> autoAssignAllUnassigned(RoutingStrategyType strategyType) {
+        List<Ticket> unassigned = ticketRepository.findByStatus(TicketStatus.OPEN)
+                .stream()
+                .filter(t -> t.getAssignedAgent() == null)
+                .toList();
+
+        if (unassigned.isEmpty()) {
+            log.info("No unassigned OPEN tickets found for batch auto-assignment.");
+            return List.of();
+        }
+
+        log.info("Batch auto-assigning {} unassigned OPEN tickets using strategy={}", unassigned.size(), strategyType);
+        List<TicketResponse> assigned = new java.util.ArrayList<>();
+        for (Ticket ticket : unassigned) {
+            assigned.add(autoAssignTicket(ticket.getId(), strategyType));
+        }
+        return assigned;
+    }
+
+    /**
      * MUTATION: Update ticket status with audit history.
      */
     @Transactional

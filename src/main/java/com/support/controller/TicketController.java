@@ -189,21 +189,36 @@ public class TicketController {
         return ResponseEntity.status(HttpStatus.OK).body(ticket);
     }
 
-    @Operation(summary = "Auto-assign ticket using Strategy Pattern", description = "Selects an optimal agent using the specified strategy (WORKLOAD_BALANCED, ROUND_ROBIN, PRIORITY_BASED) and assigns the ticket.")
+    @Operation(summary = "Auto-assign ticket using Strategy Pattern", description = "Selects an optimal agent using the specified strategy (WORKLOAD_BALANCED, ROUND_ROBIN, PRIORITY_BASED) and assigns the ticket. Restricted to Admin and System Admin.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Ticket auto-assigned successfully"),
             @ApiResponse(responseCode = "400", description = "No available agents or invalid ticket state"),
-            @ApiResponse(responseCode = "403", description = "Forbidden: Requires SUPPORT_AGENT or ADMIN role"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role"),
             @ApiResponse(responseCode = "404", description = "Ticket not found")
     })
     @PutMapping("/{ticketId}/auto-assign")
-    @PreAuthorize("hasRole('SUPPORT_AGENT') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<TicketResponse> autoAssignTicket(
             @PathVariable Long ticketId,
             @RequestParam(required = false, defaultValue = "WORKLOAD_BALANCED") RoutingStrategyType strategy) {
         log.info("REST: Auto-assigning ticket id={} using strategy={}", ticketId, strategy);
         TicketResponse ticket = ticketService.autoAssignTicket(ticketId, strategy);
         return ResponseEntity.status(HttpStatus.OK).body(ticket);
+    }
+
+    @Operation(summary = "Auto-assign all unassigned open tickets", description = "Automatically routes all unassigned OPEN tickets to optimal agents using the selected strategy. Restricted to Admin and System Admin.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Tickets auto-assigned successfully"),
+            @ApiResponse(responseCode = "400", description = "No available agents"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role")
+    })
+    @PostMapping("/auto-assign-unassigned")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SYSTEM_ADMIN')")
+    public ResponseEntity<List<TicketResponse>> autoAssignAllUnassigned(
+            @RequestParam(required = false, defaultValue = "WORKLOAD_BALANCED") RoutingStrategyType strategy) {
+        log.info("REST: Auto-assigning all unassigned tickets using strategy={}", strategy);
+        List<TicketResponse> assigned = ticketService.autoAssignAllUnassigned(strategy);
+        return ResponseEntity.status(HttpStatus.OK).body(assigned);
     }
 
     @Operation(summary = "Update ticket status", description = "Transitions ticket status (OPEN -> IN_PROGRESS -> RESOLVED) and logs audit history.")

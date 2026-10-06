@@ -48,6 +48,38 @@
         <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </div>
     </div>
+
+    <!-- Auto-Assign Controls (Admin & System Admin) -->
+    <div class="auto-assign-bar">
+      <div class="strategy-selector">
+        <span class="strategy-label">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Strategy:
+        </span>
+        <div class="select-wrapper strategy-wrapper">
+          <select [(ngModel)]="selectedStrategy" class="filter-select strategy-select" title="Automated ticket routing strategy algorithm">
+            @for (strat of strategies; track strat.value) {
+            <option [value]="strat.value">{{ strat.label }}</option>
+            }
+          </select>
+          <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+      </div>
+
+      <button 
+        class="btn-auto-assign-all" 
+        (click)="autoAssignAllUnassigned()" 
+        [disabled]="unassignedCount === 0 || isBatchAutoAssigning"
+        [title]="unassignedCount > 0 ? 'Auto-assign all ' + unassignedCount + ' unassigned tickets using ' + getStrategyLabel(selectedStrategy) : 'No unassigned open tickets in queue'">
+        @if (isBatchAutoAssigning) {
+          <span class="spinner-sm"></span>
+          <span>Assigning...</span>
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-Assign All ({{ unassignedCount }})</span>
+        }
+      </button>
+    </div>
   </div>
 
   <!-- Table -->
@@ -143,13 +175,29 @@
             <app-sla-badge [ticket]="ticket" [compact]="true"></app-sla-badge>
           </td>
           <td class="col-agent">
-            <div class="reassign-wrapper">
-              <select class="reassign-select" [ngModel]="ticket.assignedAgentId || ''" (ngModelChange)="reassignTicket(ticket.id, $event)">
-                <option value="">Unassigned</option>
-                @for (agent of agents; track agent.id) {
-                <option [value]="agent.id">{{ agent.username }}</option>
+            <div class="reassign-container">
+              <div class="reassign-wrapper">
+                <select class="reassign-select" [ngModel]="ticket.assignedAgentId || ''" (ngModelChange)="reassignTicket(ticket.id, $event)">
+                  <option value="">Unassigned</option>
+                  @for (agent of agents; track agent.id) {
+                  <option [value]="agent.id">{{ agent.username }}</option>
+                  }
+                </select>
+              </div>
+              @if (ticket.status !== 'RESOLVED') {
+              <button 
+                class="btn-auto-single" 
+                (click)="autoAssignSingleTicket(ticket.id, $event)" 
+                [disabled]="autoAssigningId === ticket.id"
+                [title]="'Auto-assign ticket via ' + getStrategyLabel(selectedStrategy)">
+                @if (autoAssigningId === ticket.id) {
+                  <span class="spinner-xs"></span>
+                } @else {
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  <span>Auto</span>
                 }
-              </select>
+              </button>
+              }
             </div>
           </td>
           <td class="col-date">{{ formatDate(ticket.createdAt) }}</td>

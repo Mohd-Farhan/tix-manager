@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Ticket, TicketPriority, TicketStatus, TicketStatusHistory } from '../models/ticket.model';
+import { Ticket, TicketPriority, TicketStatus, TicketStatusHistory, RoutingStrategyType } from '../models/ticket.model';
 import { Message } from '../models/message.model';
 import { PageResponse } from '../models/page.model';
 
@@ -78,6 +78,18 @@ export class TicketService {
   assignTicket(ticketId: number, agentId: number): Observable<Ticket> {
     return this.http.put<Ticket>(`${this.apiUrl}/${ticketId}/assign?agentId=${agentId}`, {}).pipe(
       tap((ticket) => this.notifyTicketUpdated(ticket))
+    );
+  }
+
+  autoAssignTicket(ticketId: number, strategy: RoutingStrategyType | string = RoutingStrategyType.WORKLOAD_BALANCED): Observable<Ticket> {
+    return this.http.put<Ticket>(`${this.apiUrl}/${ticketId}/auto-assign?strategy=${strategy}`, {}).pipe(
+      tap((ticket) => this.notifyTicketUpdated(ticket))
+    );
+  }
+
+  autoAssignAllUnassigned(strategy: RoutingStrategyType | string = RoutingStrategyType.WORKLOAD_BALANCED): Observable<Ticket[]> {
+    return this.http.post<Ticket[]>(`${this.apiUrl}/auto-assign-unassigned?strategy=${strategy}`, {}).pipe(
+      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
     );
   }
 

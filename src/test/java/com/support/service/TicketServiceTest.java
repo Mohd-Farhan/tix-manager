@@ -30,6 +30,7 @@ import com.support.exception.InvalidStateTransitionException;
 import com.support.state.TicketStateFactory;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -366,5 +367,34 @@ class TicketServiceTest {
         assertThat(ticket.getAssignedAgent()).isEqualTo(agent);
         assertThat(ticket.getStatus()).isEqualTo(TicketStatus.IN_PROGRESS);
         verify(ticketRoutingService).resolveAgent(ticket, com.support.strategy.routing.RoutingStrategyType.WORKLOAD_BALANCED);
+    }
+
+    /**
+     * TEST CASE 11: Auto-assign all unassigned tickets routes each eligible ticket.
+     */
+    @Test
+    @DisplayName("autoAssignAllUnassigned — Batch assigns all unassigned OPEN tickets")
+    void testAutoAssignAllUnassigned_Success() {
+        Ticket unassignedTicket = new Ticket();
+        unassignedTicket.setId(101L);
+        unassignedTicket.setStatus(TicketStatus.OPEN);
+        unassignedTicket.setAssignedAgent(null);
+
+        when(ticketRepository.findByStatus(TicketStatus.OPEN)).thenReturn(List.of(unassignedTicket));
+        when(ticketRepository.findById(101L)).thenReturn(Optional.of(unassignedTicket));
+        when(ticketRoutingService.resolveAgent(unassignedTicket, com.support.strategy.routing.RoutingStrategyType.WORKLOAD_BALANCED))
+                .thenReturn(agent);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(agent));
+        when(ticketRepository.save(any(Ticket.class))).thenReturn(unassignedTicket);
+        when(historyRepository.save(any(TicketStatusHistory.class))).thenReturn(new TicketStatusHistory());
+
+        TicketResponse resp = TicketResponse.builder().id(101L).status(TicketStatus.IN_PROGRESS).assignedAgentId(2L).build();
+        when(ticketMapper.toResponse(unassignedTicket)).thenReturn(resp);
+
+        List<TicketResponse> results = ticketService.autoAssignAllUnassigned(com.support.strategy.routing.RoutingStrategyType.WORKLOAD_BALANCED);
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).getId()).isEqualTo(101L);
+        assertThat(unassignedTicket.getStatus()).isEqualTo(TicketStatus.IN_PROGRESS);
     }
 }

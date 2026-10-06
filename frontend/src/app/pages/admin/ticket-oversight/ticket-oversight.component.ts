@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { TicketService } from '../../../services/ticket.service';
 import { UserService } from '../../../services/user.service';
-import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
+import { Ticket, TicketStatus, TicketPriority, RoutingStrategyType } from '../../../models/ticket.model';
 import { User } from '../../../models/user.model';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { PriorityBadgeComponent } from '../../../shared/components/priority-badge/priority-badge.component';
@@ -41,6 +41,21 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
   priorityFilter = 'ALL';
   assignmentFilter = 'ALL';
   sortBy = 'newest';
+
+  // Strategy Pattern state (Admin & System Admin routing)
+  selectedStrategy: RoutingStrategyType = RoutingStrategyType.WORKLOAD_BALANCED;
+  autoAssigningId: number | null = null;
+  isBatchAutoAssigning = false;
+
+  readonly strategies = [
+    { value: RoutingStrategyType.WORKLOAD_BALANCED, label: 'Workload Balanced', desc: 'Least busy agent' },
+    { value: RoutingStrategyType.ROUND_ROBIN, label: 'Round Robin', desc: 'Circular fair rotation' },
+    { value: RoutingStrategyType.PRIORITY_BASED, label: 'Priority Based', desc: 'SLA fast-lane for HIGH' },
+  ];
+
+  get unassignedCount(): number {
+    return this.tickets.filter(t => !t.assignedAgentId && t.status !== TicketStatus.RESOLVED).length;
+  }
 
   // Pagination state
   currentPage = 1;
@@ -157,6 +172,50 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
         this.toast.error(`Failed to assign ticket #${ticketId}.`);
       }
     });
+  }
+
+  autoAssignSingleTicket(ticketId: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.autoAssigningId = ticketId;
+    this.cdr.detectChanges();
+
+    this.ticketService.autoAssignTicket(ticketId, this.selectedStrategy).subscribe({
+      next: (updatedTicket) => {
+        this.autoAssigningId = null;
+        const agentName = updatedTicket.assignedAgentName || 'Agent';
+        this.toast.success(`Ticket #${ticketId} auto-assigned to ${agentName} (${this.getStrategyLabel(this.selectedStrategy)}).`);
+        this.loadData();
+      },
+      error: (err) => {
+        this.autoAssigningId = null;
+        this.toast.error(err?.error?.message || `Failed to auto-assign ticket #${ticketId}.`);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  autoAssignAllUnassigned(): void {
+    if (this.unassignedCount === 0 || this.isBatchAutoAssigning) return;
+    this.isBatchAutoAssigning = true;
+    this.cdr.detectChanges();
+
+    this.ticketService.autoAssignAllUnassigned(this.selectedStrategy).subscribe({
+      next: (assignedList) => {
+        this.isBatchAutoAssigning = false;
+        this.toast.success(`Successfully auto-assigned ${assignedList.length} ticket(s) via ${this.getStrategyLabel(this.selectedStrategy)}.`);
+        this.loadData();
+      },
+      error: (err) => {
+        this.isBatchAutoAssigning = false;
+        this.toast.error(err?.error?.message || 'Failed to auto-assign unassigned tickets.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  getStrategyLabel(val: RoutingStrategyType): string {
+    const match = this.strategies.find(s => s.value === val);
+    return match ? match.label : val;
   }
 
   forceClose(ticketId: number, event: Event): void {
