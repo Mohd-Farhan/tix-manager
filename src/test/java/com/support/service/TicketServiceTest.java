@@ -27,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.mockito.Spy;
 import com.support.exception.InvalidStateTransitionException;
+import com.support.observer.publisher.TicketEventPublisher;
 import com.support.state.TicketStateFactory;
 
 import java.time.LocalDateTime;
@@ -71,7 +72,7 @@ class TicketServiceTest {
     private AuditService auditService;
 
     @Mock
-    private EmailService emailService;
+    private TicketEventPublisher ticketEventPublisher;
 
     @Mock
     private SlaService slaService;

@@ -10,6 +10,7 @@ import com.support.exception.ResourceNotFoundException;
 import com.support.mapper.MessageMapper;
 import com.support.mapper.TicketMapper;
 import com.support.mapper.TicketStatusHistoryMapper;
+import com.support.observer.publisher.TicketEventPublisher;
 import com.support.repository.*;
 import com.support.state.TicketStateFactory;
 import com.support.strategy.routing.RoutingStrategyType;
@@ -72,7 +73,7 @@ public class TicketService {
     private AuditService auditService;
 
     @Autowired
-    private EmailService emailService;
+    private TicketEventPublisher ticketEventPublisher;
 
     @Autowired
     private SlaService slaService;
@@ -154,10 +155,8 @@ public class TicketService {
         history.setChangedBy(agent);
         ticketStatusHistoryRepository.save(history);
 
-        // Enterprise Operations: Notify assigned agent
-        if (agent.getEmail() != null) {
-            emailService.sendTicketAssignedEmail(agent.getEmail(), ticket.getId(), ticket.getTitle(), agent.getUsername());
-        }
+        // GOF OBSERVER PATTERN: Publish assignment event to all subscribed observers (Email, In-App, Audit)
+        ticketEventPublisher.publishTicketAssigned(ticket, agent, agent.getUsername());
 
         return ticketMapper.toResponse(ticket);
     }
@@ -234,13 +233,8 @@ public class TicketService {
         history.setChangedBy(changedBy);
         ticketStatusHistoryRepository.save(history);
 
-        // Enterprise Operations: Notify customer and assigned agent on status transition
-        if (ticket.getCustomer() != null && ticket.getCustomer().getEmail() != null) {
-            emailService.sendTicketStatusChangedEmail(ticket.getCustomer().getEmail(), ticket.getId(), ticket.getTitle(), oldStatus, newStatus);
-        }
-        if (ticket.getAssignedAgent() != null && !ticket.getAssignedAgent().getId().equals(changedByUserId) && ticket.getAssignedAgent().getEmail() != null) {
-            emailService.sendTicketStatusChangedEmail(ticket.getAssignedAgent().getEmail(), ticket.getId(), ticket.getTitle(), oldStatus, newStatus);
-        }
+        // GOF OBSERVER PATTERN: Publish status change event to all subscribed observers (Email, In-App, Audit)
+        ticketEventPublisher.publishTicketStatusChanged(ticket, oldStatus, newStatus, changedBy);
 
         return ticketMapper.toResponse(ticket);
     }
@@ -294,16 +288,11 @@ public class TicketService {
                 "Added message to ticket #" + ticketId);
         log.info("Added message id={} to ticket id={} by sender id={}", message.getId(), ticketId, senderId);
 
-        // Enterprise Operations: Notify counterparty on conversation reply
-        if (ticket.getCustomer() != null && senderId.equals(ticket.getCustomer().getId())) {
-            // Customer replied: notify assigned agent
-            if (ticket.getAssignedAgent() != null && ticket.getAssignedAgent().getEmail() != null) {
-                emailService.sendTicketReplyEmail(ticket.getAssignedAgent().getEmail(), ticket.getId(), ticket.getTitle(), sender.getUsername(), content);
-            }
-        } else if (ticket.getCustomer() != null && ticket.getCustomer().getEmail() != null) {
-            // Agent or admin replied: notify customer
-            emailService.sendTicketReplyEmail(ticket.getCustomer().getEmail(), ticket.getId(), ticket.getTitle(), sender.getUsername(), content);
-        }
+        // GOF OBSERVER PATTERN: Publish message reply event to all subscribed observers (Email, In-App, Audit)
+        User recipient = (ticket.getCustomer() != null && senderId.equals(ticket.getCustomer().getId()))
+                ? ticket.getAssignedAgent()
+                : ticket.getCustomer();
+        ticketEventPublisher.publishTicketMessageAdded(ticket, message, sender, recipient);
 
         return messageMapper.toResponse(message);
     }
