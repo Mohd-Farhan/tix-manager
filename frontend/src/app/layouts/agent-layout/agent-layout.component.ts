@@ -8,13 +8,14 @@ import { User, UserRole } from '../../models/user.model';
 import { ThemeService } from '../../services/theme.service';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
 import { ChangePasswordModalComponent } from '../../shared/components/change-password-modal/change-password-modal.component';
+import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
 
 export type AgentModalType = 'profile' | 'preferences' | 'password' | null;
 
 @Component({
   selector: 'app-agent-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent, ChangePasswordModalComponent],
+  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent, ChangePasswordModalComponent, NotificationBellComponent],
   templateUrl: './agent-layout.component.html',
   styleUrl: './agent-layout.component.css',
 })

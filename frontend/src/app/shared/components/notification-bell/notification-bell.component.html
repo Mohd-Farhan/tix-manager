@@ -1,0 +1,123 @@
+<div class="notification-bell-container" id="notification-bell-container">
+  <!-- Trigger Bell Button -->
+  <button
+    type="button"
+    class="bell-btn"
+    [class.active]="isOpen()"
+    (click)="toggleDropdown($event)"
+    aria-label="View notifications"
+    [attr.aria-expanded]="isOpen()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bell-icon">
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+    </svg>
+
+    @if (unreadCount() > 0) {
+      <span class="unread-badge" aria-label="Unread notifications count">
+        {{ unreadCount() > 99 ? '99+' : unreadCount() }}
+      </span>
+    }
+  </button>
+
+  <!-- Glassmorphism Dropdown Popover -->
+  @if (isOpen()) {
+    <div class="notification-popover" role="region" aria-label="Notifications panel" (click)="$event.stopPropagation()">
+      <!-- Popover Header -->
+      <div class="popover-header">
+        <div class="header-title-row">
+          <h3 class="header-heading">Notifications</h3>
+          @if (unreadCount() > 0) {
+            <span class="header-count-chip">{{ unreadCount() }} new</span>
+          }
+        </div>
+
+        @if (unreadCount() > 0) {
+          <button type="button" class="mark-all-btn" (click)="markAllAsRead($event)">
+            Mark all read
+          </button>
+        }
+      </div>
+
+      <!-- Popover Body / List -->
+      <div class="popover-body">
+        @if (isLoading() && notifications().length === 0) {
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <span>Checking notifications...</span>
+          </div>
+        } @else if (notifications().length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                <path d="m9 11 2 2 4-4"/>
+              </svg>
+            </div>
+            <h4 class="empty-title">You're all caught up!</h4>
+            <p class="empty-desc">No new ticket alerts or status updates at this moment.</p>
+          </div>
+        } @else {
+          <div class="notification-list">
+            @for (item of notifications(); track item.id) {
+              <div
+                class="notification-item"
+                [class.unread]="!item.read"
+                (click)="onNotificationClick(item)"
+                role="button"
+                tabindex="0"
+                [attr.aria-label]="item.title">
+                
+                <!-- Type-coded Icon -->
+                <div class="type-icon-box" [attr.data-type]="item.type">
+                  @if (item.type === 'TICKET_ASSIGNED') {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <polyline points="16 11 18 13 22 9"/>
+                    </svg>
+                  } @else if (item.type === 'STATUS_CHANGED') {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                    </svg>
+                  } @else if (item.type === 'NEW_MESSAGE') {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/>
+                      <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                  }
+                </div>
+
+                <!-- Text Body -->
+                <div class="notification-content">
+                  <div class="meta-row">
+                    <span class="type-pill" [attr.data-type]="item.type">{{ getBadgeLabel(item.type) }}</span>
+                    <span class="timestamp">{{ timeAgo(item.createdAt) }}</span>
+                  </div>
+                  <h4 class="item-title">{{ item.title }}</h4>
+                  <p class="item-message">{{ item.message }}</p>
+                </div>
+
+                <!-- Unread status dot -->
+                @if (!item.read) {
+                  <span class="unread-dot" title="Unread"></span>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

@@ -11,13 +11,14 @@ import { TicketPriority } from '../../models/ticket.model';
 import { ThemeService } from '../../services/theme.service';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
 import { ChangePasswordModalComponent } from '../../shared/components/change-password-modal/change-password-modal.component';
+import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
 
 export type ActiveModalType = 'profile' | 'preferences' | 'password' | 'create-ticket' | null;
 
 @Component({
   selector: 'app-customer-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent, ChangePasswordModalComponent],
+  imports: [CommonModule, FormsModule, RouterOutlet, RouterLink, RouterLinkActive, LogoComponent, ChangePasswordModalComponent, NotificationBellComponent],
   templateUrl: './customer-layout.component.html',
   styleUrl: './customer-layout.component.css',
 })
