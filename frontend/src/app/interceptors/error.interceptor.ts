@@ -22,6 +22,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
+      // Login endpoint manages its own inline error banner and user messaging
+      if (req.url.includes('/api/auth/login')) {
+        return throwError(() => error);
+      }
+
       let errorMessage = 'An unexpected network error occurred.';
 
       if (error.error) {
@@ -68,6 +73,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
         case 409:
           toastService.warning(errorMessage || 'A resource with these details already exists.', 'Conflict');
+          break;
+
+        case 429:
+          toastService.warning(errorMessage || 'Too many requests. Please wait a moment before trying again.', 'Rate Limited');
           break;
 
         case 500:

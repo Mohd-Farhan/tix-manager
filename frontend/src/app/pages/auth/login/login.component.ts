@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -30,6 +30,7 @@ export class LoginComponent implements OnInit {
   private themeService = inject(ThemeService);
   private userService = inject(UserService);
   private toast = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
 
   loginForm!: FormGroup;
   changePasswordForm!: FormGroup;
@@ -69,6 +70,7 @@ export class LoginComponent implements OnInit {
           this.forceChangeMode = true;
           this.tempUserId = currentUser.id;
           this.tempRole = currentUser.role;
+          this.cdr.detectChanges();
         }
       }
     });
@@ -93,11 +95,13 @@ export class LoginComponent implements OnInit {
   onSubmit(): void {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
+      this.cdr.detectChanges();
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = '';
+    this.cdr.detectChanges();
 
     const { username, password } = this.loginForm.value;
 
@@ -111,9 +115,11 @@ export class LoginComponent implements OnInit {
           this.tempUserId = res.user.id;
           this.tempRole = res.user.role;
           this.changePasswordForm.patchValue({ currentPassword: password });
+          this.cdr.detectChanges();
           return;
         }
 
+        this.cdr.detectChanges();
         this.redirectToRole(res.user?.role);
       },
       error: (err) => {
@@ -126,6 +132,8 @@ export class LoginComponent implements OnInit {
         } else {
           this.errorMessage = err.error?.message || err.error || 'Login failed. Please verify the backend is running.';
         }
+        this.toast.error(this.errorMessage, 'Authentication Failed');
+        this.cdr.detectChanges();
       },
     });
   }
@@ -133,6 +141,7 @@ export class LoginComponent implements OnInit {
   onChangePasswordSubmit(): void {
     if (this.changePasswordForm.invalid) {
       this.changePasswordForm.markAllAsTouched();
+      this.cdr.detectChanges();
       return;
     }
 
@@ -140,17 +149,20 @@ export class LoginComponent implements OnInit {
 
     if (newPassword !== confirmPassword) {
       this.errorMessage = 'New password and confirm password do not match.';
+      this.cdr.detectChanges();
       return;
     }
 
     if (!this.tempUserId) {
       this.errorMessage = 'Session context lost. Please log in again.';
       this.forceChangeMode = false;
+      this.cdr.detectChanges();
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = '';
+    this.cdr.detectChanges();
 
     this.userService.updatePassword(this.tempUserId, currentPassword, newPassword).subscribe({
       next: () => {
@@ -158,11 +170,14 @@ export class LoginComponent implements OnInit {
         this.authService.updateCurrentUser({ mustChangePassword: false });
         this.toast.success('Password updated successfully. Welcome to TixManager!');
         this.forceChangeMode = false;
+        this.cdr.detectChanges();
         this.redirectToRole(this.tempRole);
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = err.error?.message || err.error || 'Failed to update password. Please check your current password.';
+        this.toast.error(this.errorMessage, 'Update Failed');
+        this.cdr.detectChanges();
       },
     });
   }
@@ -170,6 +185,7 @@ export class LoginComponent implements OnInit {
   cancelPasswordChange(): void {
     this.forceChangeMode = false;
     this.authService.logout();
+    this.cdr.detectChanges();
   }
 
   private redirectToRole(role?: UserRole | null): void {
