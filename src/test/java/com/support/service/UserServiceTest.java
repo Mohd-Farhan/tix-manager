@@ -438,7 +438,7 @@ class UserServiceTest {
         user.setDeleted(true);
         org.springframework.data.domain.Page<User> userPage = new org.springframework.data.domain.PageImpl<>(java.util.List.of(user));
 
-        when(userRepository.findAllIncludingDeleted(pageable)).thenReturn(userPage);
+        when(userRepository.findAll(pageable)).thenReturn(userPage);
         when(userMapper.toDTO(user)).thenReturn(UserDTO.builder().id(1L).username("deleted_user").build());
 
         org.springframework.data.domain.Page<UserDTO> result = userService.getAllUsersIncludingDeleted(pageable);

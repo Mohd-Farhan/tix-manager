@@ -10,8 +10,9 @@ export interface User {
   username: string;
   email: string;
   role: UserRole;
+  active?: boolean;
   deleted?: boolean;
-  status?: 'active' | 'inactive';
+  status?: 'active' | 'inactive' | 'deleted';
   mustChangePassword?: boolean;
   createdAt?: string;
 }

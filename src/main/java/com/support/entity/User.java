@@ -1,7 +1,5 @@
 package com.support.entity;
 
-import org.hibernate.annotations.SQLRestriction;
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -22,6 +20,7 @@ import lombok.*;
 @Entity
 @Table(name = "users", indexes = {
         @Index(name = "idx_user_role", columnList = "role"),
+        @Index(name = "idx_user_active", columnList = "active"),
         @Index(name = "idx_user_deleted", columnList = "deleted"),
         @Index(name = "idx_user_created_at", columnList = "created_at DESC")
 })
@@ -29,7 +28,6 @@ import lombok.*;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@SQLRestriction("deleted = false")
 public class User extends Auditable {
 
     @Id
@@ -53,6 +51,9 @@ public class User extends Auditable {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role = UserRole.CUSTOMER;
+
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean active = true;
 
     @Column(nullable = false)
     private boolean deleted = false;

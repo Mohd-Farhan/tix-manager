@@ -6,6 +6,9 @@ import com.support.dto.CreateUserRequest;
 import com.support.dto.PasswordChangeDTO;
 import com.support.dto.UserDTO;
 import com.support.entity.BulkUploadHistory;
+import com.support.entity.Ticket;
+import com.support.entity.TicketStatus;
+import com.support.entity.TicketStatusHistory;
 import com.support.entity.User;
 import com.support.entity.UserRole;
 import com.support.exception.DuplicateResourceException;
@@ -14,6 +17,8 @@ import com.support.exception.ResourceNotFoundException;
 import com.support.mapper.BulkUploadHistoryMapper;
 import com.support.mapper.UserMapper;
 import com.support.repository.BulkUploadHistoryRepository;
+import com.support.repository.TicketRepository;
+import com.support.repository.TicketStatusHistoryRepository;
 import com.support.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +85,12 @@ public class UserService {
 
     @Autowired
     private RefreshTokenService refreshTokenService;
+
+    @Autowired
+    private TicketRepository ticketRepository;
+
+    @Autowired
+    private TicketStatusHistoryRepository ticketStatusHistoryRepository;
 
     @Transactional
     public UserDTO createUser(CreateUserRequest request, String currentUsername) {
@@ -353,14 +364,13 @@ public class UserService {
     }
 
     @Transactional
-    public void softDeleteUser(Long userId) {
-        softDeleteUser(userId, null);
-    }
-
-    @Transactional
-    public void softDeleteUser(Long userId, String currentUsername) {
+    public void deactivateUser(Long userId, String currentUsername) {
         User target = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        if (target.isDeleted()) {
+            throw new InvalidOperationException("User is already deleted.");
+        }
 
         if (currentUsername != null) {
             User caller = userRepository.findByUsername(currentUsername)
@@ -371,47 +381,178 @@ public class UserService {
             }
 
             if (caller.getRole() == UserRole.ADMIN && (target.getRole() == UserRole.ADMIN || target.getRole() == UserRole.SYSTEM_ADMIN)) {
-                throw new InvalidOperationException("Admins cannot deactivate Admin or System Admin accounts.");
+                throw new InvalidOperationException("Admins can only deactivate Customer and Support Agent accounts.");
             }
         }
 
+        if (!target.isActive()) {
+            throw new InvalidOperationException("User is already deactivated.");
+        }
+
+        // If the user is an agent, reopen their IN_PROGRESS tickets before deactivation
+        reopenInProgressTicketsIfAgent(target, currentUsername, "deactivation");
+
+        target.setActive(false);
+        userRepository.save(target);
+        refreshTokenService.revokeAllUserTokens(target);
+        auditService.recordEntityChange("USER", target.getId(), "DEACTIVATE", currentUsername,
+                "User '" + target.getUsername() + "' deactivated");
+        log.warn("User deactivated: userId={}, username={}, deactivatedBy={}", userId, target.getUsername(), currentUsername != null ? currentUsername : "SYSTEM");
+    }
+
+    @Transactional
+    public void activateUser(Long userId, String currentUsername) {
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        if (target.isDeleted()) {
+            throw new InvalidOperationException("Deleted users cannot be activated.");
+        }
+
+        if (target.isActive()) {
+            throw new InvalidOperationException("User is already active.");
+        }
+
+        if (currentUsername != null) {
+            User caller = userRepository.findByUsername(currentUsername)
+                    .orElseThrow(() -> new UsernameNotFoundException(currentUsername));
+
+            if (caller.getRole() == UserRole.ADMIN && (target.getRole() == UserRole.ADMIN || target.getRole() == UserRole.SYSTEM_ADMIN)) {
+                throw new InvalidOperationException("Admins can only activate Customer and Support Agent accounts.");
+            }
+        }
+
+        target.setActive(true);
+        userRepository.save(target);
+        auditService.recordEntityChange("USER", target.getId(), "ACTIVATE", currentUsername,
+                "User '" + target.getUsername() + "' activated");
+        log.info("User activated: userId={}, username={}, activatedBy={}", userId, target.getUsername(), currentUsername != null ? currentUsername : "SYSTEM");
+    }
+
+    @Transactional
+    public void deleteUser(Long userId, String currentUsername) {
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        if (target.isDeleted()) {
+            throw new InvalidOperationException("User is already deleted.");
+        }
+
+        if (currentUsername != null) {
+            User caller = userRepository.findByUsername(currentUsername)
+                    .orElseThrow(() -> new UsernameNotFoundException(currentUsername));
+
+            if (caller.getRole() != UserRole.SYSTEM_ADMIN) {
+                throw new InvalidOperationException("Only System Admin can delete user accounts.");
+            }
+
+            if (caller.getId().equals(target.getId())) {
+                throw new InvalidOperationException("System Admin cannot delete their own account.");
+            }
+        }
+
+        // Reopen tickets if agent
+        reopenInProgressTicketsIfAgent(target, currentUsername, "deletion");
+
         target.setDeleted(true);
+        target.setActive(false);
         userRepository.save(target);
         refreshTokenService.revokeAllUserTokens(target);
         auditService.recordEntityChange("USER", target.getId(), "DELETE", currentUsername,
-                "User '" + target.getUsername() + "' deactivated (soft-deleted)");
-        log.warn("User soft-deleted: userId={}, username={}, deletedBy={}", userId, target.getUsername(), currentUsername != null ? currentUsername : "SYSTEM");
+                "User '" + target.getUsername() + "' soft-deleted by System Admin");
+        log.warn("User deleted: userId={}, username={}, deletedBy={}", userId, target.getUsername(), currentUsername != null ? currentUsername : "SYSTEM");
     }
 
+    private void reopenInProgressTicketsIfAgent(User target, String currentUsername, String actionReason) {
+        if (target.getRole() == UserRole.SUPPORT_AGENT) {
+            List<Ticket> inProgressTickets = ticketRepository.findByAssignedAgentIdAndStatus(
+                    target.getId(), TicketStatus.IN_PROGRESS);
+            for (Ticket ticket : inProgressTickets) {
+                TicketStatus previousStatus = ticket.getStatus();
+                ticket.setStatus(TicketStatus.OPEN);
+                ticket.setAssignedAgent(null);
+                ticketRepository.save(ticket);
+
+                TicketStatusHistory history = new TicketStatusHistory();
+                history.setPreviousStatus(previousStatus);
+                history.setNewStatus(TicketStatus.OPEN);
+                history.setTicket(ticket);
+                history.setChangedBy(target);
+                ticketStatusHistoryRepository.save(history);
+
+                auditService.recordEntityChange("TICKET", ticket.getId(), "STATUS_CHANGE", currentUsername,
+                        "Ticket reopened (OPEN) due to agent '" + target.getUsername() + "' " + actionReason);
+            }
+            if (!inProgressTickets.isEmpty()) {
+                log.info("Reopened {} IN_PROGRESS tickets assigned to {} agent '{}'",
+                        inProgressTickets.size(), actionReason, target.getUsername());
+            }
+        }
+    }
+
+    @Transactional
+    public void softDeleteUser(Long userId) {
+        deleteUser(userId, null);
+    }
+
+    @Transactional
+    public void softDeleteUser(Long userId, String currentUsername) {
+        deleteUser(userId, currentUsername);
+    }
+
+    @Transactional
+    public void reactivateUser(Long userId, String currentUsername) {
+        activateUser(userId, currentUsername);
+    }
 
     public List<UserDTO> getUsersByRole(UserRole role) {
         List<User> users = userRepository.findByRole(role);
         return userMapper.toDTOList(users);
     }
 
+    public List<UserDTO> getActiveAgents() {
+        List<User> agents = userRepository.findByRoleAndActiveTrueAndDeletedFalse(UserRole.SUPPORT_AGENT);
+        return userMapper.toDTOList(agents);
+    }
+
     public Page<UserDTO> getUsersByRole(UserRole role, Pageable pageable) {
         return userRepository.findByRole(role, pageable).map(userMapper::toDTO);
     }
 
+    /**
+     * System Admin: returns all users including soft-deleted.
+     */
     public List<UserDTO> getAllUsers() {
-        List<User> users = userRepository.findAll();
-        return userMapper.toDTOList(users);
+        return userMapper.toDTOList(userRepository.findAll());
     }
 
+    /**
+     * System Admin: returns paginated users including soft-deleted.
+     */
     public Page<UserDTO> getAllUsers(Pageable pageable) {
         return userRepository.findAll(pageable).map(userMapper::toDTO);
     }
 
-    public List<UserDTO> getAllUsersIncludingDeleted() {
-        List<User> users = userRepository.findAllIncludingDeleted();
-        return userMapper.toDTOList(users);
+    /**
+     * Admin: returns active and inactive users, excluding soft-deleted.
+     */
+    public List<UserDTO> getNonDeletedUsers() {
+        return userMapper.toDTOList(userRepository.findByDeletedFalse());
     }
 
     /**
-     * Retrieves paginated users including soft-deleted accounts for administrative audits.
+     * Admin: returns paginated active and inactive users, excluding soft-deleted.
      */
+    public Page<UserDTO> getNonDeletedUsers(Pageable pageable) {
+        return userRepository.findByDeletedFalse(pageable).map(userMapper::toDTO);
+    }
+
+    public List<UserDTO> getAllUsersIncludingDeleted() {
+        return getAllUsers();
+    }
+
     public Page<UserDTO> getAllUsersIncludingDeleted(Pageable pageable) {
-        return userRepository.findAllIncludingDeleted(pageable).map(userMapper::toDTO);
+        return getAllUsers(pageable);
     }
 
     /**

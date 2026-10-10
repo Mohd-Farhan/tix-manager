@@ -31,6 +31,8 @@ public class UserDTO {
 
     private UserRole role;
 
+    @Builder.Default
+    private boolean active = true;
     private boolean deleted;
     private boolean mustChangePassword;
 

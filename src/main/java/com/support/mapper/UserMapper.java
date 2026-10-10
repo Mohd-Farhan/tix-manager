@@ -20,6 +20,7 @@ public interface UserMapper {
     List<UserDTO> toDTOList(List<User> users);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "active", ignore = true)
     @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
@@ -29,6 +30,7 @@ public interface UserMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "password", ignore = true)
+    @Mapping(target = "active", ignore = true)
     @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "createdAt", ignore = true)

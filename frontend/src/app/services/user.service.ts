@@ -60,6 +60,22 @@ export class UserService {
   }
 
   softDeleteUser(id: number): Observable<void> {
+    return this.deleteUser(id);
+  }
+
+  deleteUser(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  deactivateUser(id: number): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/${id}/deactivate`, {});
+  }
+
+  activateUser(id: number): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/${id}/activate`, {});
+  }
+
+  reactivateUser(id: number): Observable<void> {
+    return this.activateUser(id);
   }
 }

@@ -162,6 +162,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
+    /**
+     * HANDLER: DisabledException (Deactivated Account Login Attempt)
+     * HTTP STATUS: 403 Forbidden
+     * WHY: Triggered when a soft-deleted user attempts to log in. Distinct from 401 (wrong password)
+     * so the frontend can show a specific "account deactivated" message instead of "invalid credentials".
+     */
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<ErrorResponse> handleDisabled(org.springframework.security.authentication.DisabledException ex, HttpServletRequest request) {
+        log.warn("Deactivated account login attempt on path [{}]: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error("Account Deactivated")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
     @ExceptionHandler(com.support.exception.RefreshTokenException.class)
     public ResponseEntity<ErrorResponse> handleRefreshTokenException(com.support.exception.RefreshTokenException ex, HttpServletRequest request) {
         log.warn("Refresh token failure on path [{}]: {}", request.getRequestURI(), ex.getMessage());

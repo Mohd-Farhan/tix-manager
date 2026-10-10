@@ -127,6 +127,9 @@ export class LoginComponent implements OnInit {
         // OWASP ASVS v4.0 §2.2.1: Friendly messaging for HTTP 429 lockout
         if (err.status === 429) {
           this.errorMessage = err.error?.message || 'Too many failed login attempts. Access is locked for 15 minutes.';
+        } else if (err.status === 403) {
+          // Deactivated account — distinct from wrong credentials
+          this.errorMessage = err.error?.message || 'This account has been deactivated. Contact an administrator.';
         } else if (err.status === 401) {
           this.errorMessage = 'Invalid username or password. Please try again.';
         } else {

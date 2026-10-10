@@ -1,5 +1,6 @@
 package com.support.security;
 
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -21,6 +22,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+        if (user.isDeleted() || !user.isActive()) {
+            throw new DisabledException("Account has been deactivated. Contact an administrator.");
+        }
+
         return new UserDetailsImpl(user);
     }
 }
+

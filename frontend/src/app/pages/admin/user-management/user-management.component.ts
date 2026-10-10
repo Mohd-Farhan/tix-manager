@@ -36,7 +36,7 @@ export class UserManagementComponent implements OnInit {
   isLoading = true;
   readonly skeletonRows = [1, 2, 3, 4, 5, 6];
 
-  // Confirm dialog state (Deactivate / Reactivate)
+  // Confirm dialog state (Deactivate / Activate / Delete)
   confirmDialog = {
     visible: false,
     title: '',
@@ -44,7 +44,7 @@ export class UserManagementComponent implements OnInit {
     confirmLabel: 'Confirm',
     variant: 'danger' as 'danger' | 'default',
     targetUserId: null as number | null,
-    targetAction: '' as 'deactivate' | 'reactivate',
+    targetAction: '' as 'deactivate' | 'activate' | 'delete',
   };
 
   // Pagination state
@@ -117,13 +117,29 @@ export class UserManagementComponent implements OnInit {
     return true;
   }
 
+  canActivateDeactivate(user: User): boolean {
+    if (user.deleted) return false;
+    if (this.currentUser?.id === user.id) return false;
+    if (!this.isSystemAdmin) {
+      return user.role === UserRole.CUSTOMER || user.role === UserRole.SUPPORT_AGENT;
+    }
+    return true;
+  }
+
+  canDeleteUser(user: User): boolean {
+    if (!this.isSystemAdmin) return false;
+    if (user.deleted) return false;
+    if (this.currentUser?.id === user.id) return false;
+    return true;
+  }
+
   loadUsers(): void {
     this.isLoading = true;
     this.userService.getAllUsersAdmin().subscribe({
       next: (users) => {
         this.users = users.map(u => ({
           ...u,
-          status: u.deleted ? 'inactive' : 'active'
+          status: u.deleted ? 'deleted' : (u.active !== false ? 'active' : 'inactive')
         }));
         this.applyFilters();
         this.isLoading = false;
@@ -298,20 +314,38 @@ export class UserManagementComponent implements OnInit {
 
   toggleStatus(userId: number): void {
     const user = this.users.find(u => u.id === userId);
-    if (user && !this.canModifyUser(user)) {
+    if (!user || !this.canActivateDeactivate(user)) {
       this.toast.error('Cannot modify this user account.');
       return;
     }
 
-    const action = user?.status === 'active' ? 'deactivate' : 'reactivate';
+    const action = user.status === 'active' ? 'deactivate' : 'activate';
     this.confirmDialog = {
       visible: true,
-      title: `${action === 'deactivate' ? 'Deactivate' : 'Reactivate'} User`,
-      message: `Are you sure you want to ${action} user "${user?.username}"? This action can be reversed by an administrator.`,
-      confirmLabel: action === 'deactivate' ? 'Deactivate User' : 'Reactivate User',
+      title: `${action === 'deactivate' ? 'Deactivate' : 'Activate'} User`,
+      message: `Are you sure you want to ${action} user "${user.username}"? ${action === 'deactivate' ? 'The user will be blocked from logging in.' : 'The user will be allowed to log in.'}`,
+      confirmLabel: action === 'deactivate' ? 'Deactivate User' : 'Activate User',
       variant: action === 'deactivate' ? 'danger' : 'default',
       targetUserId: userId,
       targetAction: action,
+    };
+  }
+
+  deleteUserAction(userId: number): void {
+    const user = this.users.find(u => u.id === userId);
+    if (!user || !this.canDeleteUser(user)) {
+      this.toast.error('Cannot delete this user account.');
+      return;
+    }
+
+    this.confirmDialog = {
+      visible: true,
+      title: 'Delete User Account',
+      message: `Are you sure you want to delete user "${user.username}"? All associated tickets and messages will be preserved, but the account will be soft-deleted.`,
+      confirmLabel: 'Delete User',
+      variant: 'danger',
+      targetUserId: userId,
+      targetAction: 'delete',
     };
   }
 
@@ -322,13 +356,20 @@ export class UserManagementComponent implements OnInit {
     this.confirmDialog.visible = false;
     this.confirmDialog.targetUserId = null;
 
-    this.userService.softDeleteUser(userId).subscribe({
+    const request$ = action === 'deactivate'
+      ? this.userService.deactivateUser(userId)
+      : action === 'activate'
+      ? this.userService.activateUser(userId)
+      : this.userService.deleteUser(userId);
+
+    request$.subscribe({
       next: () => {
-        this.toast.success(`User #${userId} ${action}d successfully.`);
+        const pastTense = action === 'delete' ? 'deleted' : `${action}d`;
+        this.toast.success(`User #${userId} ${pastTense} successfully.`);
         this.loadUsers();
       },
       error: (err) => {
-        this.toast.error(err.error?.message || `Failed to update status for user #${userId}.`);
+        this.toast.error(err.error?.message || `Failed to ${action} user #${userId}.`);
       }
     });
   }

@@ -6,8 +6,6 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.support.entity.User;
@@ -31,12 +29,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Page<User> findByRole(UserRole role, Pageable pageable);
 
-    @Query("SELECT u FROM User u")
-    List<User> findAllIncludingDeleted();
+    List<User> findByRoleAndActiveTrueAndDeletedFalse(UserRole role);
 
-    @Query("SELECT u FROM User u")
-    Page<User> findAllIncludingDeleted(Pageable pageable);
+    List<User> findByDeletedFalse();
 
-    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.username = :username")
-    boolean existsByUsernameIncludingDeleted(@Param("username") String username);
+    Page<User> findByDeletedFalse(Pageable pageable);
 }

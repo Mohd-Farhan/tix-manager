@@ -47,7 +47,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return !user.isDeleted();
+        return !user.isDeleted() && user.isActive();
     }
 
     @Override
@@ -57,6 +57,6 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return !user.isDeleted();
+        return !user.isDeleted() && user.isActive();
     }
 }

@@ -5,7 +5,6 @@ import com.support.dto.BulkUploadResultDTO;
 import com.support.dto.CreateUserRequest;
 import com.support.dto.PasswordChangeDTO;
 import com.support.dto.UserDTO;
-import com.support.entity.UserRole;
 import com.support.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -119,7 +118,7 @@ public class UserController {
     @GetMapping("/agents")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPPORT_AGENT')")
     public ResponseEntity<List<UserDTO>> getAgents() {
-        List<UserDTO> agents = userService.getUsersByRole(UserRole.SUPPORT_AGENT);
+        List<UserDTO> agents = userService.getActiveAgents();
         return ResponseEntity.ok(agents);
     }
 
@@ -168,39 +167,88 @@ public class UserController {
         return ResponseEntity.ok(updated);
     }
 
-    @Operation(summary = "Soft delete user", description = "Flags a user as deleted without dropping historical database records. Enforces role hierarchy.")
+    @Operation(summary = "Deactivate user account", description = "Deactivates a user (active = false). Admins can deactivate Customer and Agent; System Admin can deactivate any except self.")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "User soft deleted"),
+            @ApiResponse(responseCode = "200", description = "User deactivated successfully"),
             @ApiResponse(responseCode = "400", description = "Cannot deactivate own account or hierarchy violation"),
             @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role"),
             @ApiResponse(responseCode = "404", description = "User not found")
     })
-    @DeleteMapping("/{id}")
+    @PutMapping("/{id}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> softDeleteUser(
+    public ResponseEntity<Void> deactivateUser(
             @PathVariable Long id,
             Authentication authentication) {
         String actor = authentication != null ? authentication.getName() : "anonymous";
-        log.warn("REST: Admin '{}' requested soft-delete for userId={}", actor, id);
-        userService.softDeleteUser(id, actor);
+        log.warn("REST: Admin '{}' requested deactivation for userId={}", actor, id);
+        userService.deactivateUser(id, actor);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Activate user account", description = "Activates a user (active = true). Admins can activate Customer and Agent; System Admin can activate any except self.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User activated successfully"),
+            @ApiResponse(responseCode = "400", description = "User is already active or hierarchy violation"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @PutMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> activateUser(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "anonymous";
+        log.info("REST: Admin '{}' requested activation for userId={}", actor, id);
+        userService.activateUser(id, actor);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Reactivate user (alias to activate)", description = "Restores user account. Kept for backwards compatibility.")
+    @PutMapping("/{id}/reactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> reactivateUser(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "anonymous";
+        log.info("REST: Admin '{}' requested activation for userId={}", actor, id);
+        userService.activateUser(id, actor);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Delete user account", description = "Soft deletes a user (deleted = true, active = false). Only SYSTEM_ADMIN can delete accounts (except own).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "User soft deleted"),
+            @ApiResponse(responseCode = "400", description = "Cannot delete own account"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires SYSTEM_ADMIN role"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
+    public ResponseEntity<Void> deleteUser(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String actor = authentication != null ? authentication.getName() : "anonymous";
+        log.warn("REST: System Admin '{}' requested deletion for userId={}", actor, id);
+        userService.deleteUser(id, actor);
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Get all users including deleted", description = "Administrative query to audit all users. Admin only.")
+    @Operation(summary = "Get all users", description = "Administrative query to audit users. System Admin sees all including deleted; Admin sees non-deleted.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "List of all users retrieved"),
+            @ApiResponse(responseCode = "200", description = "List of users retrieved"),
             @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN role")
     })
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<UserDTO>> getAllUsersIncludingDeleted() {
-        List<UserDTO> users = userService.getAllUsersIncludingDeleted();
+    public ResponseEntity<List<UserDTO>> getAllUsers(Authentication authentication) {
+        boolean isSysAdmin = isSystemAdmin(authentication);
+        List<UserDTO> users = isSysAdmin ? userService.getAllUsers() : userService.getNonDeletedUsers();
         return ResponseEntity.ok(users);
     }
 
-    @Operation(summary = "Get paginated active users", description = "Returns pageable active users with configurable page size, number, and sort order.")
+    @Operation(summary = "Get paginated users", description = "Returns pageable users with configurable page size, number, and sort order. System Admin sees all including deleted; Admin sees non-deleted.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Page of active users retrieved"),
+            @ApiResponse(responseCode = "200", description = "Page of users retrieved"),
             @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN role")
     })
     @GetMapping("/paged")
@@ -208,14 +256,16 @@ public class UserController {
     public ResponseEntity<Page<UserDTO>> getAllUsersPaged(
             @ParameterObject
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable) {
-        Page<UserDTO> users = userService.getAllUsers(pageable);
+            Pageable pageable,
+            Authentication authentication) {
+        boolean isSysAdmin = isSystemAdmin(authentication);
+        Page<UserDTO> users = isSysAdmin ? userService.getAllUsers(pageable) : userService.getNonDeletedUsers(pageable);
         return ResponseEntity.ok(users);
     }
 
-    @Operation(summary = "Get paginated users including deleted", description = "Administrative query to audit all users with pagination. Admin only.")
+    @Operation(summary = "Get paginated users including deleted", description = "Administrative query for user management. System Admin sees all; Admin sees non-deleted.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Page of all users retrieved"),
+            @ApiResponse(responseCode = "200", description = "Page of users retrieved"),
             @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN role")
     })
     @GetMapping("/admin/paged")
@@ -223,8 +273,15 @@ public class UserController {
     public ResponseEntity<Page<UserDTO>> getAllUsersIncludingDeletedPaged(
             @ParameterObject
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable) {
-        Page<UserDTO> users = userService.getAllUsersIncludingDeleted(pageable);
+            Pageable pageable,
+            Authentication authentication) {
+        boolean isSysAdmin = isSystemAdmin(authentication);
+        Page<UserDTO> users = isSysAdmin ? userService.getAllUsers(pageable) : userService.getNonDeletedUsers(pageable);
         return ResponseEntity.ok(users);
+    }
+
+    private boolean isSystemAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SYSTEM_ADMIN"));
     }
 }
