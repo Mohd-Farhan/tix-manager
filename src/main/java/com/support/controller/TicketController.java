@@ -206,18 +206,65 @@ public class TicketController {
         return ResponseEntity.status(HttpStatus.OK).body(ticket);
     }
 
-    @Operation(summary = "Auto-assign all unassigned open tickets", description = "Automatically routes all unassigned OPEN tickets to optimal agents using the selected strategy. Restricted to Admin and System Admin.")
+    @Operation(summary = "Unassign ticket", description = "Removes assigned agent from ticket and returns status to OPEN.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ticket unassigned successfully"),
+            @ApiResponse(responseCode = "400", description = "Cannot unassign resolved ticket"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role"),
+            @ApiResponse(responseCode = "404", description = "Ticket not found")
+    })
+    @PutMapping("/{ticketId}/unassign")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SYSTEM_ADMIN')")
+    public ResponseEntity<TicketResponse> unassignTicket(@PathVariable Long ticketId) {
+        log.info("REST: Unassigning ticket id={}", ticketId);
+        TicketResponse ticket = ticketService.unassignTicket(ticketId);
+        return ResponseEntity.status(HttpStatus.OK).body(ticket);
+    }
+
+    @Operation(summary = "Auto-assign all unassigned open tickets", description = "Automatically routes all unassigned tickets to optimal agents using the selected strategy. Restricted to Admin and System Admin.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Tickets auto-assigned successfully"),
             @ApiResponse(responseCode = "400", description = "No available agents"),
             @ApiResponse(responseCode = "403", description = "Forbidden: Requires ADMIN or SYSTEM_ADMIN role")
     })
-    @PostMapping("/auto-assign-unassigned")
+    @PostMapping({"/auto-assign-all", "/auto-assign-unassigned"})
     @PreAuthorize("hasRole('ADMIN') or hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<List<TicketResponse>> autoAssignAllUnassigned(
             @RequestParam(required = false, defaultValue = "WORKLOAD_BALANCED") RoutingStrategyType strategy) {
         log.info("REST: Auto-assigning all unassigned tickets using strategy={}", strategy);
         List<TicketResponse> assigned = ticketService.autoAssignAllUnassigned(strategy);
+        return ResponseEntity.status(HttpStatus.OK).body(assigned);
+    }
+
+    @Operation(summary = "Batch auto-assign selected tickets", description = "Automatically routes selected tickets to optimal agents using the selected strategy.")
+    @PostMapping("/batch-auto-assign")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SYSTEM_ADMIN')")
+    public ResponseEntity<List<TicketResponse>> batchAutoAssign(
+            @RequestParam(required = false, defaultValue = "WORKLOAD_BALANCED") RoutingStrategyType strategy,
+            @RequestBody List<Long> ticketIds) {
+        log.info("REST: Batch auto-assigning {} tickets using strategy={}", ticketIds != null ? ticketIds.size() : 0, strategy);
+        List<TicketResponse> assigned = ticketService.batchAutoAssign(ticketIds, strategy);
+        return ResponseEntity.status(HttpStatus.OK).body(assigned);
+    }
+
+    @Operation(summary = "Batch unassign selected tickets", description = "Removes assigned agents from selected tickets and resets status to OPEN.")
+    @PostMapping("/batch-unassign")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SYSTEM_ADMIN')")
+    public ResponseEntity<List<TicketResponse>> batchUnassign(
+            @RequestBody List<Long> ticketIds) {
+        log.info("REST: Batch unassigning {} tickets", ticketIds != null ? ticketIds.size() : 0);
+        List<TicketResponse> unassigned = ticketService.batchUnassign(ticketIds);
+        return ResponseEntity.status(HttpStatus.OK).body(unassigned);
+    }
+
+    @Operation(summary = "Batch assign selected tickets to an agent", description = "Assigns selected tickets to the specified support agent.")
+    @PostMapping("/batch-assign")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SYSTEM_ADMIN')")
+    public ResponseEntity<List<TicketResponse>> batchAssign(
+            @RequestParam Long agentId,
+            @RequestBody List<Long> ticketIds) {
+        log.info("REST: Batch assigning {} tickets to agent id={}", ticketIds != null ? ticketIds.size() : 0, agentId);
+        List<TicketResponse> assigned = ticketService.batchAssign(ticketIds, agentId);
         return ResponseEntity.status(HttpStatus.OK).body(assigned);
     }
 

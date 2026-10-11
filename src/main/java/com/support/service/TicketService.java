@@ -181,14 +181,46 @@ public class TicketService {
     }
 
     /**
+     * MUTATION: Unassign agent from ticket and revert status to OPEN.
+     */
+    @Transactional
+    public TicketResponse unassignTicket(Long ticketId) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
+
+        if (ticket.getStatus() == TicketStatus.RESOLVED) {
+            throw new InvalidOperationException("Cannot unassign a resolved ticket.");
+        }
+
+        User previousAgent = ticket.getAssignedAgent();
+        TicketStatus previousStatus = ticket.getStatus();
+
+        ticket.setAssignedAgent(null);
+        ticket.setStatus(TicketStatus.OPEN);
+        ticketRepository.save(ticket);
+
+        TicketStatusHistory history = new TicketStatusHistory();
+        history.setPreviousStatus(previousStatus);
+        history.setNewStatus(TicketStatus.OPEN);
+        history.setTicket(ticket);
+        history.setChangedBy(previousAgent);
+        ticketStatusHistoryRepository.save(history);
+
+        String prevName = previousAgent != null ? previousAgent.getUsername() : "none";
+        auditService.recordEntityChange("TICKET", ticket.getId(), "UNASSIGN", null,
+                "Ticket unassigned from agent '" + prevName + "' and reverted to OPEN");
+
+        log.info("Ticket id={} unassigned from agent '{}' and reverted to OPEN", ticketId, prevName);
+        return ticketMapper.toResponse(ticket);
+    }
+
+    /**
      * MUTATION: Automatically assign all unassigned open tickets using Strategy Pattern routing.
-     * Evaluates all unassigned OPEN tickets and routes each to the optimal agent.
      */
     @Transactional
     public List<TicketResponse> autoAssignAllUnassigned(RoutingStrategyType strategyType) {
-        List<Ticket> unassigned = ticketRepository.findByStatus(TicketStatus.OPEN)
-                .stream()
-                .filter(t -> t.getAssignedAgent() == null)
+        List<Ticket> unassigned = ticketRepository.findByStatus(TicketStatus.OPEN).stream()
+                .filter(t -> !t.isDeleted() && t.getAssignedAgent() == null)
                 .toList();
 
         if (unassigned.isEmpty()) {
@@ -200,6 +232,48 @@ public class TicketService {
         List<TicketResponse> assigned = new java.util.ArrayList<>();
         for (Ticket ticket : unassigned) {
             assigned.add(autoAssignTicket(ticket.getId(), strategyType));
+        }
+        return assigned;
+    }
+
+    /**
+     * MUTATION: Batch auto-assign selected tickets using Strategy Pattern routing.
+     */
+    @Transactional
+    public List<TicketResponse> batchAutoAssign(List<Long> ticketIds, RoutingStrategyType strategyType) {
+        if (ticketIds == null || ticketIds.isEmpty()) return List.of();
+        log.info("Batch auto-assigning {} selected tickets using strategy={}", ticketIds.size(), strategyType);
+        List<TicketResponse> assigned = new java.util.ArrayList<>();
+        for (Long id : ticketIds) {
+            assigned.add(autoAssignTicket(id, strategyType));
+        }
+        return assigned;
+    }
+
+    /**
+     * MUTATION: Batch unassign selected tickets and revert to OPEN.
+     */
+    @Transactional
+    public List<TicketResponse> batchUnassign(List<Long> ticketIds) {
+        if (ticketIds == null || ticketIds.isEmpty()) return List.of();
+        log.info("Batch unassigning {} selected tickets", ticketIds.size());
+        List<TicketResponse> unassigned = new java.util.ArrayList<>();
+        for (Long id : ticketIds) {
+            unassigned.add(unassignTicket(id));
+        }
+        return unassigned;
+    }
+
+    /**
+     * MUTATION: Batch assign selected tickets to a specified agent.
+     */
+    @Transactional
+    public List<TicketResponse> batchAssign(List<Long> ticketIds, Long agentId) {
+        if (ticketIds == null || ticketIds.isEmpty()) return List.of();
+        log.info("Batch assigning {} selected tickets to agent id={}", ticketIds.size(), agentId);
+        List<TicketResponse> assigned = new java.util.ArrayList<>();
+        for (Long id : ticketIds) {
+            assigned.add(assignTicket(id, agentId));
         }
         return assigned;
     }

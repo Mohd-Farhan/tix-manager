@@ -45,7 +45,12 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
   // Strategy Pattern state (Admin & System Admin routing)
   selectedStrategy: RoutingStrategyType = RoutingStrategyType.WORKLOAD_BALANCED;
   autoAssigningId: number | null = null;
-  isBatchAutoAssigning = false;
+  isBatchExecuting = false;
+
+  // Batch action state
+  selectedBatchAction: 'AUTO_ASSIGN_ALL' | 'AUTO_ASSIGN_SELECTED' | 'UNASSIGN_SELECTED' | 'ASSIGN_TO_AGENT' = 'AUTO_ASSIGN_ALL';
+  selectedBatchAgentId: number | null = null;
+  selectedTicketIds = new Set<number>();
 
   readonly strategies = [
     { value: RoutingStrategyType.WORKLOAD_BALANCED, label: 'Workload Balanced', desc: 'Least busy agent' },
@@ -55,6 +60,10 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
 
   get unassignedCount(): number {
     return this.tickets.filter(t => !t.assignedAgentId && t.status !== TicketStatus.RESOLVED).length;
+  }
+
+  get activeTicketsCount(): number {
+    return this.tickets.filter(t => t.status !== TicketStatus.RESOLVED).length;
   }
 
   // Pagination state
@@ -107,6 +116,8 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
     this.ticketService.getAllTickets().subscribe({
       next: (tickets) => {
         this.tickets = tickets.filter(t => !t.deleted);
+        const validIds = new Set(this.tickets.map(t => t.id));
+        this.selectedTicketIds = new Set([...this.selectedTicketIds].filter(id => validIds.has(id)));
         this.applyFilters();
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -161,7 +172,19 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
 
   reassignTicket(ticketId: number, agentId: string): void {
     const id = +agentId;
-    if (!id) return;
+    if (!id) {
+      this.ticketService.unassignTicket(ticketId).subscribe({
+        next: () => {
+          this.toast.success(`Ticket #${ticketId} unassigned and reverted to OPEN.`);
+          this.loadData();
+        },
+        error: (err) => {
+          this.toast.error(err?.error?.message || `Failed to unassign ticket #${ticketId}.`);
+          this.loadData();
+        }
+      });
+      return;
+    }
 
     this.ticketService.assignTicket(ticketId, id).subscribe({
       next: () => {
@@ -194,23 +217,162 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
     });
   }
 
-  autoAssignAllUnassigned(): void {
-    if (this.unassignedCount === 0 || this.isBatchAutoAssigning) return;
-    this.isBatchAutoAssigning = true;
-    this.cdr.detectChanges();
+  isSelected(ticketId: number): boolean {
+    return this.selectedTicketIds.has(ticketId);
+  }
 
-    this.ticketService.autoAssignAllUnassigned(this.selectedStrategy).subscribe({
-      next: (assignedList) => {
-        this.isBatchAutoAssigning = false;
-        this.toast.success(`Successfully auto-assigned ${assignedList.length} ticket(s) via ${this.getStrategyLabel(this.selectedStrategy)}.`);
-        this.loadData();
-      },
-      error: (err) => {
-        this.isBatchAutoAssigning = false;
-        this.toast.error(err?.error?.message || 'Failed to auto-assign unassigned tickets.');
-        this.cdr.detectChanges();
+  toggleSelectTicket(ticketId: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (this.selectedTicketIds.has(ticketId)) {
+      this.selectedTicketIds.delete(ticketId);
+    } else {
+      this.selectedTicketIds.add(ticketId);
+    }
+    this.cdr.detectChanges();
+  }
+
+  isAllSelected(): boolean {
+    const visible = this.paginatedTickets;
+    return visible.length > 0 && visible.every(t => this.selectedTicketIds.has(t.id));
+  }
+
+  isPartiallySelected(): boolean {
+    const visible = this.paginatedTickets;
+    const count = visible.filter(t => this.selectedTicketIds.has(t.id)).length;
+    return count > 0 && count < visible.length;
+  }
+
+  toggleSelectAll(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    if (checked) {
+      this.paginatedTickets.forEach(t => this.selectedTicketIds.add(t.id));
+    } else {
+      this.paginatedTickets.forEach(t => this.selectedTicketIds.delete(t.id));
+    }
+    this.cdr.detectChanges();
+  }
+
+  isExecuteDisabled(): boolean {
+    if (this.isBatchExecuting) return true;
+    if (this.selectedBatchAction === 'AUTO_ASSIGN_ALL') {
+      return this.unassignedCount === 0;
+    }
+    if (this.selectedBatchAction === 'AUTO_ASSIGN_SELECTED') {
+      return this.selectedTicketIds.size === 0;
+    }
+    if (this.selectedBatchAction === 'UNASSIGN_SELECTED') {
+      return this.selectedTicketIds.size === 0;
+    }
+    if (this.selectedBatchAction === 'ASSIGN_TO_AGENT') {
+      return this.selectedTicketIds.size === 0 || !this.selectedBatchAgentId;
+    }
+    return false;
+  }
+
+  getBatchButtonLabel(): string {
+    const count = this.selectedTicketIds.size;
+    switch (this.selectedBatchAction) {
+      case 'AUTO_ASSIGN_ALL':
+        return `Auto Assign All (${this.unassignedCount})`;
+      case 'AUTO_ASSIGN_SELECTED':
+        return count > 0 ? `Auto Assign (${count})` : 'Auto Assign Selected';
+      case 'UNASSIGN_SELECTED':
+        return count > 0 ? `Unassign (${count})` : 'Unassigned Selected';
+      case 'ASSIGN_TO_AGENT':
+        return count > 0 ? `Assign (${count})` : 'Assign to Agent';
+      default:
+        return 'Execute';
+    }
+  }
+
+  executeBatchAction(): void {
+    if (this.isBatchExecuting) return;
+
+    if (this.selectedBatchAction === 'AUTO_ASSIGN_ALL') {
+      if (this.unassignedCount === 0) {
+        this.toast.info('No unassigned OPEN tickets to assign.');
+        return;
       }
-    });
+      this.isBatchExecuting = true;
+      this.cdr.detectChanges();
+
+      this.ticketService.autoAssignAllUnassigned(this.selectedStrategy).subscribe({
+        next: (assignedList) => {
+          this.isBatchExecuting = false;
+          this.toast.success(`Successfully auto-assigned ${assignedList.length} ticket(s) via ${this.getStrategyLabel(this.selectedStrategy)}.`);
+          this.loadData();
+        },
+        error: (err) => {
+          this.isBatchExecuting = false;
+          this.toast.error(err?.error?.message || 'Failed to auto-assign tickets.');
+          this.cdr.detectChanges();
+        }
+      });
+      return;
+    }
+
+    const selectedIds = Array.from(this.selectedTicketIds);
+    if (selectedIds.length === 0) {
+      this.toast.info('Please select at least one ticket.');
+      return;
+    }
+
+    if (this.selectedBatchAction === 'AUTO_ASSIGN_SELECTED') {
+      this.isBatchExecuting = true;
+      this.cdr.detectChanges();
+      this.ticketService.batchAutoAssign(selectedIds, this.selectedStrategy).subscribe({
+        next: (assignedList) => {
+          this.isBatchExecuting = false;
+          this.selectedTicketIds.clear();
+          this.toast.success(`Successfully auto-assigned ${assignedList.length} ticket(s) via ${this.getStrategyLabel(this.selectedStrategy)}.`);
+          this.loadData();
+        },
+        error: (err) => {
+          this.isBatchExecuting = false;
+          this.toast.error(err?.error?.message || 'Failed to auto-assign selected tickets.');
+          this.cdr.detectChanges();
+        }
+      });
+    } else if (this.selectedBatchAction === 'UNASSIGN_SELECTED') {
+      this.isBatchExecuting = true;
+      this.cdr.detectChanges();
+      this.ticketService.batchUnassign(selectedIds).subscribe({
+        next: (unassignedList) => {
+          this.isBatchExecuting = false;
+          this.selectedTicketIds.clear();
+          this.toast.success(`Successfully unassigned ${unassignedList.length} ticket(s).`);
+          this.loadData();
+        },
+        error: (err) => {
+          this.isBatchExecuting = false;
+          this.toast.error(err?.error?.message || 'Failed to unassign selected tickets.');
+          this.cdr.detectChanges();
+        }
+      });
+    } else if (this.selectedBatchAction === 'ASSIGN_TO_AGENT') {
+      if (!this.selectedBatchAgentId) {
+        this.toast.error('Please select an agent to assign tickets to.');
+        return;
+      }
+      this.isBatchExecuting = true;
+      this.cdr.detectChanges();
+      const agentId = this.selectedBatchAgentId;
+      const agent = this.agents.find(a => a.id === agentId);
+      const agentName = agent ? agent.username : `Agent #${agentId}`;
+      this.ticketService.batchAssign(selectedIds, agentId).subscribe({
+        next: (assignedList) => {
+          this.isBatchExecuting = false;
+          this.selectedTicketIds.clear();
+          this.toast.success(`Successfully assigned ${assignedList.length} ticket(s) to ${agentName}.`);
+          this.loadData();
+        },
+        error: (err) => {
+          this.isBatchExecuting = false;
+          this.toast.error(err?.error?.message || 'Failed to assign selected tickets.');
+          this.cdr.detectChanges();
+        }
+      });
+    }
   }
 
   getStrategyLabel(val: RoutingStrategyType): string {

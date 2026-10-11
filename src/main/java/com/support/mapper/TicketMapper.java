@@ -3,6 +3,9 @@ package com.support.mapper;
 import com.support.dto.CreateTicketRequest;
 import com.support.dto.TicketResponse;
 import com.support.entity.Ticket;
+
+import com.support.entity.User;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -97,10 +100,31 @@ public interface TicketMapper {
     void updateEntityFromRequest(CreateTicketRequest request, @MappingTarget Ticket ticket);
 
     /**
+     * DEACTIVATED / DELETED USER BADGE RESOLUTION (@AfterMapping):
+     * Appends [Deactivated] or [Deleted] suffix to customer and agent names.
+     */
+    @AfterMapping
+    default void resolveDeactivatedUsers(Ticket ticket, @MappingTarget TicketResponse response) {
+        if (ticket == null || response == null) return;
+
+        if (ticket.getCustomer() != null) {
+            User c = ticket.getCustomer();
+            String suffix = c.isDeleted() ? " [Deleted]" : (!c.isActive() ? " [Deactivated]" : "");
+            response.setCustomerUsername(c.getUsername() + suffix);
+        }
+
+        if (ticket.getAssignedAgent() != null) {
+            User a = ticket.getAssignedAgent();
+            String suffix = a.isDeleted() ? " [Deleted]" : (!a.isActive() ? " [Deactivated]" : "");
+            response.setAssignedAgentName(a.getUsername() + suffix);
+        }
+    }
+
+    /**
      * Dynamic SLA Operational Status Calculation:
      * Computes remaining seconds and active/resolved SLA state.
      */
-    @org.mapstruct.AfterMapping
+    @AfterMapping
     default void populateSlaComputedFields(Ticket ticket, @MappingTarget TicketResponse response) {
         if (ticket == null || response == null) return;
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
@@ -128,3 +152,4 @@ public interface TicketMapper {
         }
     }
 }
+

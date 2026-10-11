@@ -47,6 +47,12 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     Page<Ticket> findByAssignedAgentId(Long agentId, Pageable pageable);
 
     /**
+     * Find tickets assigned to a specific agent with a given status.
+     * Used during agent deactivation to reopen IN_PROGRESS tickets.
+     */
+    List<Ticket> findByAssignedAgentIdAndStatus(Long agentId, TicketStatus status);
+
+    /**
      * WORKLOAD QUERY: Count active tickets (OPEN or IN_PROGRESS) assigned to a given agent.
      * Used by WorkloadBalancedRoutingStrategy to balance ticket assignments across the support team.
      */

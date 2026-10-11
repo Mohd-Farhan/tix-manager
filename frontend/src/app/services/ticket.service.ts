@@ -81,14 +81,44 @@ export class TicketService {
     );
   }
 
+  unassignTicket(ticketId: number): Observable<Ticket> {
+    return this.http.put<Ticket>(`${this.apiUrl}/${ticketId}/unassign`, {}).pipe(
+      tap((ticket) => this.notifyTicketUpdated(ticket))
+    );
+  }
+
   autoAssignTicket(ticketId: number, strategy: RoutingStrategyType | string = RoutingStrategyType.WORKLOAD_BALANCED): Observable<Ticket> {
     return this.http.put<Ticket>(`${this.apiUrl}/${ticketId}/auto-assign?strategy=${strategy}`, {}).pipe(
       tap((ticket) => this.notifyTicketUpdated(ticket))
     );
   }
 
+  autoAssignAll(strategy: RoutingStrategyType | string = RoutingStrategyType.WORKLOAD_BALANCED): Observable<Ticket[]> {
+    return this.http.post<Ticket[]>(`${this.apiUrl}/auto-assign-all?strategy=${strategy}`, {}).pipe(
+      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
+    );
+  }
+
   autoAssignAllUnassigned(strategy: RoutingStrategyType | string = RoutingStrategyType.WORKLOAD_BALANCED): Observable<Ticket[]> {
     return this.http.post<Ticket[]>(`${this.apiUrl}/auto-assign-unassigned?strategy=${strategy}`, {}).pipe(
+      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
+    );
+  }
+
+  batchAutoAssign(ticketIds: number[], strategy: RoutingStrategyType | string = RoutingStrategyType.WORKLOAD_BALANCED): Observable<Ticket[]> {
+    return this.http.post<Ticket[]>(`${this.apiUrl}/batch-auto-assign?strategy=${strategy}`, ticketIds).pipe(
+      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
+    );
+  }
+
+  batchUnassign(ticketIds: number[]): Observable<Ticket[]> {
+    return this.http.post<Ticket[]>(`${this.apiUrl}/batch-unassign`, ticketIds).pipe(
+      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
+    );
+  }
+
+  batchAssign(ticketIds: number[], agentId: number): Observable<Ticket[]> {
+    return this.http.post<Ticket[]>(`${this.apiUrl}/batch-assign?agentId=${agentId}`, ticketIds).pipe(
       tap(() => this.ticketUpdatedSubject.next({} as Ticket))
     );
   }

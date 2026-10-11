@@ -55,11 +55,8 @@ public class TicketRoutingService {
      * @throws InvalidOperationException if no active agents are available in the system.
      */
     public User resolveAgent(Ticket ticket, RoutingStrategyType strategyType) {
-        // 1. Fetch all support agents from the database
-        List<User> activeAgents = userRepository.findByRole(UserRole.SUPPORT_AGENT)
-                .stream()
-                .filter(agent -> !agent.isDeleted())
-                .toList();
+        // 1. Fetch active, non-deleted support agents from the database
+        List<User> activeAgents = userRepository.findByRoleAndActiveTrueAndDeletedFalse(UserRole.SUPPORT_AGENT);
 
         if (activeAgents.isEmpty()) {
             log.error("Ticket routing failed: No active SUPPORT_AGENT users found in the system.");

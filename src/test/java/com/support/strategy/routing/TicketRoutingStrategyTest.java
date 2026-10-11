@@ -260,7 +260,7 @@ class TicketRoutingStrategyTest {
         @Test
         @DisplayName("resolveAgent — Successfully fetches agents and delegates to strategy")
         void testResolveAgent_Success() {
-            when(userRepository.findByRole(UserRole.SUPPORT_AGENT)).thenReturn(List.of(agentA, agentB));
+            when(userRepository.findByRoleAndActiveTrueAndDeletedFalse(UserRole.SUPPORT_AGENT)).thenReturn(List.of(agentA, agentB));
             when(ticketRepository.countActiveTicketsByAgentId(10L)).thenReturn(3L);
             when(ticketRepository.countActiveTicketsByAgentId(20L)).thenReturn(0L);
 
@@ -272,7 +272,7 @@ class TicketRoutingStrategyTest {
         @Test
         @DisplayName("resolveAgent — Throws InvalidOperationException when 0 agents exist")
         void testResolveAgent_NoAgents_ThrowsException() {
-            when(userRepository.findByRole(UserRole.SUPPORT_AGENT)).thenReturn(Collections.emptyList());
+            when(userRepository.findByRoleAndActiveTrueAndDeletedFalse(UserRole.SUPPORT_AGENT)).thenReturn(Collections.emptyList());
 
             assertThatThrownBy(() -> routingService.resolveAgent(ticket, RoutingStrategyType.WORKLOAD_BALANCED))
                     .isInstanceOf(InvalidOperationException.class)

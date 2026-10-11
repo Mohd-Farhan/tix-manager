@@ -49,9 +49,22 @@
       </div>
     </div>
 
-    <!-- Auto-Assign Controls (Admin & System Admin) -->
-    <div class="auto-assign-bar">
-      <div class="strategy-selector">
+    <!-- Batch Action Controls (Admin & System Admin) -->
+    <div class="batch-action-bar">
+      <!-- Main Action Dropdown -->
+      <div class="select-wrapper batch-select-wrapper">
+        <select [(ngModel)]="selectedBatchAction" class="filter-select batch-select" title="Bulk ticket action">
+          <option value="AUTO_ASSIGN_ALL">Auto Assign all</option>
+          <option value="AUTO_ASSIGN_SELECTED">Auto Assign Selected</option>
+          <option value="UNASSIGN_SELECTED">Unassigned Selected</option>
+          <option value="ASSIGN_TO_AGENT">Assign to Agent</option>
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+
+      <!-- Strategy Selector (Shown when Auto Assign all OR Auto Assign Selected) -->
+      @if (selectedBatchAction === 'AUTO_ASSIGN_ALL' || selectedBatchAction === 'AUTO_ASSIGN_SELECTED') {
+      <div class="strategy-selector fade-in-quick">
         <span class="strategy-label">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           Strategy:
@@ -65,18 +78,34 @@
           <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
       </div>
+      }
 
+      <!-- Agent Names Dropdown (Shown when Assign to Agent is selected) -->
+      @if (selectedBatchAction === 'ASSIGN_TO_AGENT') {
+      <div class="agent-selector fade-in-quick">
+        <div class="select-wrapper agent-select-wrapper">
+          <select [(ngModel)]="selectedBatchAgentId" class="filter-select agent-dropdown-select" title="Select support agent">
+            <option [ngValue]="null" disabled selected>Select Agent...</option>
+            @for (agent of agents; track agent.id) {
+            <option [ngValue]="agent.id">{{ agent.username }}</option>
+            }
+          </select>
+          <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+      </div>
+      }
+
+      <!-- Batch Action Button -->
       <button 
-        class="btn-auto-assign-all" 
-        (click)="autoAssignAllUnassigned()" 
-        [disabled]="unassignedCount === 0 || isBatchAutoAssigning"
-        [title]="unassignedCount > 0 ? 'Auto-assign all ' + unassignedCount + ' unassigned tickets using ' + getStrategyLabel(selectedStrategy) : 'No unassigned open tickets in queue'">
-        @if (isBatchAutoAssigning) {
+        class="btn-execute-batch" 
+        (click)="executeBatchAction()" 
+        [disabled]="isExecuteDisabled()">
+        @if (isBatchExecuting) {
           <span class="spinner-sm"></span>
-          <span>Assigning...</span>
+          <span>Processing...</span>
         } @else {
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          <span>Auto-Assign All ({{ unassignedCount }})</span>
+          <span>{{ getBatchButtonLabel() }}</span>
         }
       </button>
     </div>
@@ -88,6 +117,7 @@
     <table class="ticket-table skeleton-table" aria-busy="true" aria-label="Loading tickets">
       <thead>
         <tr>
+          <th class="col-select"><span class="skeleton-bar" style="width: 16px; height: 16px; border-radius: 4px;"></span></th>
           <th class="col-id">ID</th>
           <th class="col-title">Ticket Title</th>
           <th class="col-customer">Customer</th>
@@ -102,6 +132,7 @@
       <tbody>
         @for (row of skeletonRows; track row) {
         <tr class="ticket-row skeleton-row">
+          <td class="col-select"><span class="skeleton-bar shimmer" style="width: 16px; height: 16px; border-radius: 4px;"></span></td>
           <td class="col-id"><span class="skeleton-bar shimmer" style="width: 38px;"></span></td>
           <td class="col-title">
             <span class="skeleton-bar shimmer" [style.width.%]="50 + (row * 9) % 35" style="height: 15px;"></span>
@@ -143,6 +174,15 @@
     <table class="ticket-table">
       <thead>
         <tr>
+          <th class="col-select">
+            <input 
+              type="checkbox" 
+              class="ticket-checkbox" 
+              [checked]="isAllSelected()" 
+              [indeterminate]="isPartiallySelected()" 
+              (change)="toggleSelectAll($event)"
+              title="Select all visible tickets" />
+          </th>
           <th class="col-id">ID</th>
           <th class="col-title">Ticket Title</th>
           <th class="col-customer">Customer</th>
@@ -156,7 +196,16 @@
       </thead>
       <tbody>
         @for (ticket of paginatedTickets; track ticket.id) {
-        <tr class="ticket-row">
+        <tr class="ticket-row" [class.row-selected]="isSelected(ticket.id)">
+          <td class="col-select">
+            <input 
+              type="checkbox" 
+              class="ticket-checkbox" 
+              [checked]="isSelected(ticket.id)" 
+              (change)="toggleSelectTicket(ticket.id, $event)"
+              (click)="$event.stopPropagation()"
+              [title]="'Select ticket #' + ticket.id" />
+          </td>
           <td class="col-id">#{{ ticket.id }}</td>
           <td class="col-title"><div class="title-text">{{ ticket.title }}</div></td>
           <td class="col-customer">
@@ -188,8 +237,8 @@
               <button 
                 class="btn-auto-single" 
                 (click)="autoAssignSingleTicket(ticket.id, $event)" 
-                [disabled]="autoAssigningId === ticket.id"
-                [title]="'Auto-assign ticket via ' + getStrategyLabel(selectedStrategy)">
+                [disabled]="autoAssigningId === ticket.id || !!ticket.assignedAgentId"
+                [title]="ticket.assignedAgentId ? 'Ticket already assigned' : ('Auto-assign ticket via ' + getStrategyLabel(selectedStrategy))">
                 @if (autoAssigningId === ticket.id) {
                   <span class="spinner-xs"></span>
                 } @else {
