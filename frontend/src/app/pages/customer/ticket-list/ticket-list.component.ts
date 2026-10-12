@@ -7,12 +7,26 @@ import { TicketService } from '../../../services/ticket.service';
 import { AuthService } from '../../../services/auth.service';
 import { Ticket, TicketStatus, TicketPriority } from '../../../models/ticket.model';
 import { PaginationComponent, PageSizeOption } from '../../../shared/components/pagination/pagination.component';
+import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { PriorityBadgeComponent } from '../../../shared/components/priority-badge/priority-badge.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { SearchBoxComponent } from '../../../shared/components/search-box/search-box.component';
 import { SlaBadgeComponent } from '../../../shared';
 
 @Component({
   selector: 'app-ticket-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, PaginationComponent, SlaBadgeComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    FormsModule,
+    PaginationComponent,
+    SlaBadgeComponent,
+    StatusBadgeComponent,
+    PriorityBadgeComponent,
+    EmptyStateComponent,
+    SearchBoxComponent
+  ],
   templateUrl: './ticket-list.component.html',
   styleUrl: './ticket-list.component.css',
 })
@@ -31,6 +45,7 @@ export class TicketListComponent implements OnInit, OnDestroy {
   customStartDate: string = '';
   customEndDate: string = '';
   isLoading = true;
+  readonly skeletonRows = [1, 2, 3, 4, 5, 6];
 
   dateOptions = [
     { key: 'all', label: 'All Time' },

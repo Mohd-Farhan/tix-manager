@@ -1,12 +1,12 @@
-<div class="ticket-list">
+<div class="page-container fade-in">
   <div class="page-header">
     <div class="header-left">
       <h1 class="page-title">My Tickets</h1>
-      <p class="page-subtitle">{{ filteredTickets.length }} ticket{{ filteredTickets.length !== 1 ? 's' : '' }} found</p>
+      <p class="page-subtitle">{{ isLoading ? 'Loading tickets...' : (filteredTickets.length + ' total tickets found') }}</p>
     </div>
     <button type="button" (click)="openCreateTicketModal()" class="btn-new-ticket" id="ticket-list-create">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
       <span>New Ticket</span>
@@ -15,117 +15,165 @@
 
   <!-- Search & Controls -->
   <div class="controls-bar">
-    <div class="search-wrap">
-      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input type="text" class="search-input" placeholder="Search tickets..." [(ngModel)]="searchQuery"
-        (input)="onSearch()" id="ticket-list-search" />
-    </div>
+    <app-search-box
+      placeholder="Search tickets by title, description, or ID..."
+      [value]="searchQuery"
+      (searchChange)="searchQuery = $event; onSearch()" />
 
-    <select class="filter-select" [ngModel]="activeFilter" (ngModelChange)="setFilter($event)" id="ticket-list-status-filter">
-      @for (filter of filters; track filter.key) {
-      <option [value]="filter.key">{{ filter.label }} ({{ getFilterCount(filter.key) }})</option>
+    <div class="filters-group">
+      <!-- Status Filter -->
+      <div class="select-wrapper">
+        <select class="filter-select" [ngModel]="activeFilter" (ngModelChange)="setFilter($event)" id="ticket-list-status-filter">
+          @for (filter of filters; track filter.key) {
+          <option [value]="filter.key">{{ filter.label }} ({{ getFilterCount(filter.key) }})</option>
+          }
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+
+      <!-- Date Filter -->
+      <div class="select-wrapper">
+        <select class="filter-select" [ngModel]="dateFilter" (ngModelChange)="setDateFilter($event)" id="ticket-list-date-filter">
+          @for (opt of dateOptions; track opt.key) {
+          <option [value]="opt.key">{{ opt.label }}</option>
+          }
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+
+      @if (dateFilter === 'custom') {
+      <div class="custom-date-group">
+        <input type="date" class="date-input" [(ngModel)]="customStartDate" (ngModelChange)="onCustomDateChange()" aria-label="Start Date">
+        <span class="date-separator">to</span>
+        <input type="date" class="date-input" [(ngModel)]="customEndDate" (ngModelChange)="onCustomDateChange()" aria-label="End Date">
+      </div>
       }
-    </select>
 
-    <select class="filter-select" [ngModel]="dateFilter" (ngModelChange)="setDateFilter($event)" id="ticket-list-date-filter">
-      @for (opt of dateOptions; track opt.key) {
-      <option [value]="opt.key">{{ opt.label }}</option>
-      }
-    </select>
-
-    @if (dateFilter === 'custom') {
-    <div class="custom-date-group">
-      <input type="date" class="date-input" [(ngModel)]="customStartDate" (ngModelChange)="onCustomDateChange()" aria-label="Start Date">
-      <span class="date-separator">to</span>
-      <input type="date" class="date-input" [(ngModel)]="customEndDate" (ngModelChange)="onCustomDateChange()" aria-label="End Date">
-    </div>
-    }
-
-    <select class="sort-select" [ngModel]="sortBy" (ngModelChange)="setSort($event)" id="ticket-list-sort">
-      <option value="newest">Newest first</option>
-      <option value="oldest">Oldest first</option>
-      <option value="priority">Priority (High → Low)</option>
-      <option value="priority-asc">Priority (Low → High)</option>
-    </select>
-  </div>
-
-  <!-- Ticket Cards -->
-  @if (isLoading) {
-  <div class="tickets-list" aria-busy="true" aria-label="Loading tickets">
-    @for (i of [1, 2, 3, 4]; track i) {
-    <div class="ticket-card skeleton-card">
-      <div class="ticket-card-header">
-        <span class="skeleton-bar shimmer" style="width: 48px; height: 16px;"></span>
-        <div class="ticket-badges">
-          <span class="skeleton-badge shimmer" style="width: 72px; height: 22px;"></span>
-          <span class="skeleton-badge shimmer" style="width: 58px; height: 22px;"></span>
-        </div>
-      </div>
-      <div class="skeleton-bar shimmer" [style.width.%]="55 + (i * 11) % 30" style="height: 18px; margin: 0.5rem 0 0.35rem;"></div>
-      <div class="skeleton-bar shimmer" style="width: 90%; height: 13px; margin-bottom: 0.75rem;"></div>
-      <div class="ticket-meta">
-        <span class="skeleton-bar shimmer" style="width: 110px; height: 13px;"></span>
+      <!-- Sort -->
+      <div class="select-wrapper">
+        <select class="filter-select" [ngModel]="sortBy" (ngModelChange)="setSort($event)" id="ticket-list-sort">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="priority">Priority (High → Low)</option>
+          <option value="priority-asc">Priority (Low → High)</option>
+        </select>
+        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </div>
     </div>
-    }
   </div>
-  } @else if (pagedTickets.length === 0) {
-  <div class="empty-state">
-    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-    </svg>
-    <p class="empty-title">No tickets found</p>
-    <p class="empty-subtitle">Try adjusting your search or filter criteria</p>
-  </div>
-  } @else {
-  <div class="tickets-list">
-    @for (ticket of pagedTickets; track ticket.id) {
-    <a [routerLink]="'/customer/tickets/' + ticket.id" class="ticket-card" id="ticket-card-{{ ticket.id }}">
-      <div class="ticket-card-header">
-        <span class="ticket-id">#{{ ticket.id }}</span>
-        <div class="ticket-badges">
-          <span class="badge" [ngClass]="getStatusClass(ticket.status)">{{ getStatusLabel(ticket.status) }}</span>
-          <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">{{ ticket.priority }}</span>
-          <app-sla-badge [ticket]="ticket" [compact]="true"></app-sla-badge>
-        </div>
-      </div>
-      <h3 class="ticket-title">{{ ticket.title }}</h3>
-      <p class="ticket-desc">{{ ticket.description }}</p>
-      <div class="ticket-meta">
-        <span class="meta-date">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          {{ formatDate(ticket.createdAt) }}
-        </span>
-        @if (ticket.assignedAgentName) {
-        <span class="meta-agent">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-          </svg>
-          {{ ticket.assignedAgentName }}
-        </span>
+
+  <!-- Table Container -->
+  <div class="table-container">
+    @if (isLoading) {
+    <table class="ticket-table skeleton-table" aria-busy="true" aria-label="Loading tickets">
+      <thead>
+        <tr>
+          <th class="col-id">ID</th>
+          <th class="col-title">Ticket Title</th>
+          <th class="col-status">Status</th>
+          <th class="col-priority">Priority</th>
+          <th class="col-sla">SLA Status</th>
+          <th class="col-agent">Assigned Agent</th>
+          <th class="col-date">Created</th>
+          <th class="col-actions">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of skeletonRows; track row) {
+        <tr class="ticket-row skeleton-row">
+          <td class="col-id"><span class="skeleton-bar shimmer" style="width: 38px;"></span></td>
+          <td class="col-title">
+            <span class="skeleton-bar shimmer" [style.width.%]="50 + (row * 9) % 35" style="height: 15px;"></span>
+          </td>
+          <td class="col-status">
+            <span class="skeleton-badge shimmer" style="width: 75px;"></span>
+          </td>
+          <td class="col-priority">
+            <span class="skeleton-badge shimmer" style="width: 60px;"></span>
+          </td>
+          <td class="col-sla">
+            <span class="skeleton-badge shimmer" style="width: 90px;"></span>
+          </td>
+          <td class="col-agent">
+            <div class="user-cell">
+              <span class="skeleton-circle shimmer" style="width: 24px; height: 24px;"></span>
+              <span class="skeleton-bar shimmer" [style.width.px]="65 + (row * 8) % 30"></span>
+            </div>
+          </td>
+          <td class="col-date">
+            <span class="skeleton-bar shimmer" style="width: 65px;"></span>
+          </td>
+          <td class="col-actions">
+            <span class="skeleton-bar shimmer" style="width: 50px;"></span>
+          </td>
+        </tr>
         }
-      </div>
-    </a>
+      </tbody>
+    </table>
+    } @else if (pagedTickets.length === 0) {
+    <app-empty-state
+      title="No tickets found"
+      description="You haven't submitted any tickets matching this criteria." />
+    } @else {
+    <table class="ticket-table">
+      <thead>
+        <tr>
+          <th class="col-id">ID</th>
+          <th class="col-title">Ticket Title</th>
+          <th class="col-status">Status</th>
+          <th class="col-priority">Priority</th>
+          <th class="col-sla">SLA Status</th>
+          <th class="col-agent">Assigned Agent</th>
+          <th class="col-date">Created</th>
+          <th class="col-actions">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (ticket of pagedTickets; track ticket.id) {
+        <tr class="ticket-row" [routerLink]="['/customer/tickets', ticket.id]">
+          <td class="col-id">#{{ ticket.id }}</td>
+          <td class="col-title">
+            <div class="title-text">{{ ticket.title }}</div>
+            <div class="title-desc-preview">{{ ticket.description }}</div>
+          </td>
+          <td class="col-status">
+            <app-status-badge [status]="ticket.status" />
+          </td>
+          <td class="col-priority">
+            <app-priority-badge [priority]="ticket.priority" />
+          </td>
+          <td class="col-sla">
+            <app-sla-badge [ticket]="ticket" [compact]="true"></app-sla-badge>
+          </td>
+          <td class="col-agent">
+            @if (ticket.assignedAgentName) {
+            <div class="user-cell">
+              <div class="user-avatar-sm agent-avatar">{{ ticket.assignedAgentName.charAt(0).toUpperCase() }}</div>
+              <span>{{ ticket.assignedAgentName }}</span>
+            </div>
+            } @else {
+            <span class="unassigned-text">Pending Assignment</span>
+            }
+          </td>
+          <td class="col-date">{{ formatDate(ticket.createdAt) }}</td>
+          <td class="col-actions" (click)="$event.stopPropagation()">
+            <a [routerLink]="['/customer/tickets', ticket.id]" class="btn-table-action btn-view">
+              <span>View</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalItems]="filteredTickets.length"
+      [pageSizeOptions]="pageSizeOptions"
+      itemLabel="tickets"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
     }
   </div>
-
-  <!-- Pagination -->
-  <app-pagination
-    [currentPage]="currentPage"
-    [pageSize]="pageSize"
-    [totalItems]="filteredTickets.length"
-    [pageSizeOptions]="pageSizeOptions"
-    itemLabel="tickets"
-    (pageChange)="onPageChange($event)"
-    (pageSizeChange)="onPageSizeChange($event)" />
-  }
 </div>
