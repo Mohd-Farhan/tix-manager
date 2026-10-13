@@ -49,7 +49,8 @@ export class TicketQueueComponent implements OnInit, OnDestroy {
   statusFilter = 'ALL'; // ALL, OPEN, IN_PROGRESS, RESOLVED
   assignmentFilter = 'ALL'; // ALL, UNASSIGNED, ASSIGNED_TO_ME
   slaFilter = 'ALL'; // ALL, BREACHED, WARNING, OK
-  sortBy = 'newest';
+  sortColumn: string = 'updatedAt';
+  sortDirection: 'asc' | 'desc' = 'desc';
 
   // Pagination state
   currentPage = 1;
@@ -195,28 +196,52 @@ export class TicketQueueComponent implements OnInit, OnDestroy {
 
     // 5. Sorting
     result.sort((a, b) => {
-      switch (this.sortBy) {
-        case 'newest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'priority-desc':
-          return this.getPriorityWeight(b.priority) - this.getPriorityWeight(a.priority);
-        case 'priority-asc':
-          return this.getPriorityWeight(a.priority) - this.getPriorityWeight(b.priority);
-        case 'recently-updated':
-          return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
-        case 'sla-due-asc':
-          if (!a.slaDueAt) return 1;
-          if (!b.slaDueAt) return -1;
-          return new Date(a.slaDueAt).getTime() - new Date(b.slaDueAt).getTime();
-        default:
-          return 0;
+      const dir = this.sortDirection === 'asc' ? 1 : -1;
+      switch (this.sortColumn) {
+        case 'id':
+          return (a.id - b.id) * dir;
+        case 'title':
+          return (a.title || '').localeCompare(b.title || '') * dir;
+        case 'customer': {
+          const cA = this.getCustomerName(a.customerId) || '';
+          const cB = this.getCustomerName(b.customerId) || '';
+          return cA.localeCompare(cB) * dir;
+        }
+        case 'status':
+          return (a.status || '').localeCompare(b.status || '') * dir;
+        case 'priority':
+          return (this.getPriorityWeight(a.priority) - this.getPriorityWeight(b.priority)) * dir;
+        case 'sla': {
+          const timeA = a.slaDueAt ? new Date(a.slaDueAt).getTime() : (dir === 1 ? Infinity : -Infinity);
+          const timeB = b.slaDueAt ? new Date(b.slaDueAt).getTime() : (dir === 1 ? Infinity : -Infinity);
+          return (timeA - timeB) * dir;
+        }
+        case 'agent': {
+          const agA = a.assignedAgentName || '';
+          const agB = b.assignedAgentName || '';
+          return agA.localeCompare(agB) * dir;
+        }
+        case 'updatedAt':
+        default: {
+          const tA = new Date(a.updatedAt || a.createdAt).getTime();
+          const tB = new Date(b.updatedAt || b.createdAt).getTime();
+          return (tA - tB) * dir;
+        }
       }
     });
 
     this.filteredTickets = result;
     this.currentPage = 1;
+  }
+
+  toggleSort(column: string): void {
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = (column === 'updatedAt' || column === 'createdAt' || column === 'priority' || column === 'id' || column === 'sla') ? 'desc' : 'asc';
+    }
+    this.applyFilters();
   }
 
   private getPriorityWeight(priority: TicketPriority): number {

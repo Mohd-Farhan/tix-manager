@@ -31,6 +31,8 @@ export class UserManagementComponent implements OnInit {
   filteredUsers: User[] = [];
   searchTerm = '';
   roleFilter = 'ALL';
+  sortColumn = 'id';
+  sortDirection: 'asc' | 'desc' = 'asc';
   showAddUserModal = false;
   showBulkModal = false;
   isLoading = true;
@@ -160,6 +162,16 @@ export class UserManagementComponent implements OnInit {
     this.applyFilters();
   }
 
+  toggleSort(column: string): void {
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = (column === 'createdAt') ? 'desc' : 'asc';
+    }
+    this.applyFilters();
+  }
+
   private applyFilters(): void {
     let result = [...this.users];
     if (this.searchTerm.trim()) {
@@ -171,6 +183,36 @@ export class UserManagementComponent implements OnInit {
     if (this.roleFilter !== 'ALL') {
       result = result.filter((u) => u.role === this.roleFilter);
     }
+
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (this.sortColumn) {
+        case 'id':
+          comparison = (a.id ?? 0) - (b.id ?? 0);
+          break;
+        case 'username':
+          comparison = (a.username || '').localeCompare(b.username || '');
+          break;
+        case 'email':
+          comparison = (a.email || '').localeCompare(b.email || '');
+          break;
+        case 'role':
+          comparison = (a.role || '').localeCompare(b.role || '');
+          break;
+        case 'createdAt':
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          comparison = dateA - dateB;
+          break;
+        case 'status':
+          const statA = a.deleted ? 'deleted' : (a.active !== false ? 'active' : 'inactive');
+          const statB = b.deleted ? 'deleted' : (b.active !== false ? 'active' : 'inactive');
+          comparison = statA.localeCompare(statB);
+          break;
+      }
+      return this.sortDirection === 'asc' ? comparison : -comparison;
+    });
+
     this.filteredUsers = result;
     this.currentPage = 1;
   }

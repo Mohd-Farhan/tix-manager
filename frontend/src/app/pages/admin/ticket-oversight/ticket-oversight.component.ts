@@ -40,7 +40,8 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
   statusFilter = 'ALL';
   priorityFilter = 'ALL';
   assignmentFilter = 'ALL';
-  sortBy = 'newest';
+  sortColumn: string = 'createdAt';
+  sortDirection: 'asc' | 'desc' = 'desc';
 
   // Strategy Pattern state (Admin & System Admin routing)
   selectedStrategy: RoutingStrategyType = RoutingStrategyType.WORKLOAD_BALANCED;
@@ -156,16 +157,51 @@ export class TicketOversightComponent implements OnInit, OnDestroy {
     else if (this.assignmentFilter !== 'ALL') result = result.filter((t) => t.assignedAgentId === +this.assignmentFilter);
 
     result.sort((a, b) => {
-      switch (this.sortBy) {
-        case 'newest': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'oldest': return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'priority-desc': return this.getPriorityWeight(b.priority) - this.getPriorityWeight(a.priority);
-        case 'priority-asc': return this.getPriorityWeight(a.priority) - this.getPriorityWeight(b.priority);
-        default: return 0;
+      const dir = this.sortDirection === 'asc' ? 1 : -1;
+      switch (this.sortColumn) {
+        case 'id':
+          return (a.id - b.id) * dir;
+        case 'title':
+          return (a.title || '').localeCompare(b.title || '') * dir;
+        case 'customer': {
+          const cA = this.getCustomerName(a.customerId) || '';
+          const cB = this.getCustomerName(b.customerId) || '';
+          return cA.localeCompare(cB) * dir;
+        }
+        case 'status':
+          return (a.status || '').localeCompare(b.status || '') * dir;
+        case 'priority':
+          return (this.getPriorityWeight(a.priority) - this.getPriorityWeight(b.priority)) * dir;
+        case 'sla': {
+          const timeA = a.slaDueAt ? new Date(a.slaDueAt).getTime() : (dir === 1 ? Infinity : -Infinity);
+          const timeB = b.slaDueAt ? new Date(b.slaDueAt).getTime() : (dir === 1 ? Infinity : -Infinity);
+          return (timeA - timeB) * dir;
+        }
+        case 'agent': {
+          const agA = a.assignedAgentName || '';
+          const agB = b.assignedAgentName || '';
+          return agA.localeCompare(agB) * dir;
+        }
+        case 'createdAt':
+        default: {
+          const tA = new Date(a.createdAt).getTime();
+          const tB = new Date(b.createdAt).getTime();
+          return (tA - tB) * dir;
+        }
       }
     });
     this.filteredTickets = result;
     this.currentPage = 1;
+  }
+
+  toggleSort(column: string): void {
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = (column === 'createdAt' || column === 'priority' || column === 'id' || column === 'sla') ? 'desc' : 'asc';
+    }
+    this.applyFilters();
   }
 
   private getPriorityWeight(p: TicketPriority): number { return { LOW: 1, MEDIUM: 2, HIGH: 3 }[p] ?? 0; }

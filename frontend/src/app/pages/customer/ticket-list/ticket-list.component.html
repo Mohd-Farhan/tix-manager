@@ -48,17 +48,6 @@
         <input type="date" class="date-input" [(ngModel)]="customEndDate" (ngModelChange)="onCustomDateChange()" aria-label="End Date">
       </div>
       }
-
-      <!-- Sort -->
-      <div class="select-wrapper">
-        <select class="filter-select" [ngModel]="sortBy" (ngModelChange)="setSort($event)" id="ticket-list-sort">
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-          <option value="priority">Priority (High → Low)</option>
-          <option value="priority-asc">Priority (Low → High)</option>
-        </select>
-        <svg class="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </div>
     </div>
   </div>
 
@@ -118,13 +107,118 @@
     <table class="ticket-table">
       <thead>
         <tr>
-          <th class="col-id">ID</th>
-          <th class="col-title">Ticket Title</th>
-          <th class="col-status">Status</th>
-          <th class="col-priority">Priority</th>
-          <th class="col-sla">SLA Status</th>
-          <th class="col-agent">Assigned Agent</th>
-          <th class="col-date">Created</th>
+          <th class="col-id sortable" (click)="toggleSort('id')" title="Sort by ID">
+            <div class="th-content">
+              <span>ID</span>
+              <span class="sort-icon" [class.active]="sortColumn === 'id'">
+                @if (sortColumn === 'id') {
+                  @if (sortDirection === 'asc') {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  } @else {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  }
+                } @else {
+                  <svg class="sort-svg sort-svg-neutral" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>
+                }
+              </span>
+            </div>
+          </th>
+          <th class="col-title sortable" (click)="toggleSort('title')" title="Sort by Title">
+            <div class="th-content">
+              <span>Ticket Title</span>
+              <span class="sort-icon" [class.active]="sortColumn === 'title'">
+                @if (sortColumn === 'title') {
+                  @if (sortDirection === 'asc') {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  } @else {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  }
+                } @else {
+                  <svg class="sort-svg sort-svg-neutral" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>
+                }
+              </span>
+            </div>
+          </th>
+          <th class="col-status sortable" (click)="toggleSort('status')" title="Sort by Status">
+            <div class="th-content">
+              <span>Status</span>
+              <span class="sort-icon" [class.active]="sortColumn === 'status'">
+                @if (sortColumn === 'status') {
+                  @if (sortDirection === 'asc') {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  } @else {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  }
+                } @else {
+                  <svg class="sort-svg sort-svg-neutral" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>
+                }
+              </span>
+            </div>
+          </th>
+          <th class="col-priority sortable" (click)="toggleSort('priority')" title="Sort by Priority">
+            <div class="th-content">
+              <span>Priority</span>
+              <span class="sort-icon" [class.active]="sortColumn === 'priority'">
+                @if (sortColumn === 'priority') {
+                  @if (sortDirection === 'asc') {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  } @else {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  }
+                } @else {
+                  <svg class="sort-svg sort-svg-neutral" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>
+                }
+              </span>
+            </div>
+          </th>
+          <th class="col-sla sortable" (click)="toggleSort('sla')" title="Sort by SLA Deadline">
+            <div class="th-content">
+              <span>SLA Status</span>
+              <span class="sort-icon" [class.active]="sortColumn === 'sla'">
+                @if (sortColumn === 'sla') {
+                  @if (sortDirection === 'asc') {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  } @else {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  }
+                } @else {
+                  <svg class="sort-svg sort-svg-neutral" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>
+                }
+              </span>
+            </div>
+          </th>
+          <th class="col-agent sortable" (click)="toggleSort('agent')" title="Sort by Assigned Agent">
+            <div class="th-content">
+              <span>Assigned Agent</span>
+              <span class="sort-icon" [class.active]="sortColumn === 'agent'">
+                @if (sortColumn === 'agent') {
+                  @if (sortDirection === 'asc') {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  } @else {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  }
+                } @else {
+                  <svg class="sort-svg sort-svg-neutral" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>
+                }
+              </span>
+            </div>
+          </th>
+          <th class="col-date sortable" (click)="toggleSort('createdAt')" title="Sort by Created Date">
+            <div class="th-content">
+              <span>Created</span>
+              <span class="sort-icon" [class.active]="sortColumn === 'createdAt'">
+                @if (sortColumn === 'createdAt') {
+                  @if (sortDirection === 'asc') {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  } @else {
+                    <svg class="sort-svg" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  }
+                } @else {
+                  <svg class="sort-svg sort-svg-neutral" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>
+                }
+              </span>
+            </div>
+          </th>
           <th class="col-actions">Action</th>
         </tr>
       </thead>

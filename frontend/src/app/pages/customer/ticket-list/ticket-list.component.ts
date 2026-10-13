@@ -40,7 +40,8 @@ export class TicketListComponent implements OnInit, OnDestroy {
   filteredTickets: Ticket[] = [];
   searchQuery = '';
   activeFilter: string = 'ALL';
-  sortBy: 'newest' | 'oldest' | 'priority' | 'priority-asc' = 'newest';
+  sortColumn: string = 'createdAt';
+  sortDirection: 'asc' | 'desc' = 'desc';
   dateFilter: string = 'all';
   customStartDate: string = '';
   customEndDate: string = '';
@@ -132,8 +133,13 @@ export class TicketListComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  setSort(sort: 'newest' | 'oldest' | 'priority' | 'priority-asc'): void {
-    this.sortBy = sort;
+  toggleSort(column: string): void {
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = (column === 'createdAt' || column === 'priority' || column === 'id' || column === 'sla') ? 'desc' : 'asc';
+    }
     this.applyFilters();
   }
 
@@ -188,17 +194,37 @@ export class TicketListComponent implements OnInit, OnDestroy {
     }
 
     // Sort
-    if (this.sortBy === 'newest') {
-      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } else if (this.sortBy === 'oldest') {
-      result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    } else if (this.sortBy === 'priority') {
-      const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-      result.sort((a, b) => (order[a.priority] ?? 1) - (order[b.priority] ?? 1));
-    } else if (this.sortBy === 'priority-asc') {
-      const order = { LOW: 0, MEDIUM: 1, HIGH: 2 };
-      result.sort((a, b) => (order[a.priority] ?? 1) - (order[b.priority] ?? 1));
-    }
+    result.sort((a, b) => {
+      const dir = this.sortDirection === 'asc' ? 1 : -1;
+      switch (this.sortColumn) {
+        case 'id':
+          return (a.id - b.id) * dir;
+        case 'title':
+          return (a.title || '').localeCompare(b.title || '') * dir;
+        case 'status':
+          return (a.status || '').localeCompare(b.status || '') * dir;
+        case 'priority': {
+          const order = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+          return ((order[a.priority] ?? 0) - (order[b.priority] ?? 0)) * dir;
+        }
+        case 'sla': {
+          const timeA = a.slaDueAt ? new Date(a.slaDueAt).getTime() : (dir === 1 ? Infinity : -Infinity);
+          const timeB = b.slaDueAt ? new Date(b.slaDueAt).getTime() : (dir === 1 ? Infinity : -Infinity);
+          return (timeA - timeB) * dir;
+        }
+        case 'agent': {
+          const agA = a.assignedAgentName || '';
+          const agB = b.assignedAgentName || '';
+          return agA.localeCompare(agB) * dir;
+        }
+        case 'createdAt':
+        default: {
+          const tA = new Date(a.createdAt).getTime();
+          const tB = new Date(b.createdAt).getTime();
+          return (tA - tB) * dir;
+        }
+      }
+    });
 
     this.filteredTickets = result;
     this.currentPage = 1;

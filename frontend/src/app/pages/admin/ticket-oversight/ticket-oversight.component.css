@@ -39,6 +39,38 @@
   padding: 1rem 1.25rem; font-size: 0.75rem; font-weight: 700; color: var(--on-surface-variant);
   text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--outline-variant); z-index: 10;
 }
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+th.sortable:hover {
+  background: var(--surface-container-high) !important;
+  color: var(--on-surface) !important;
+}
+.th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.sort-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--outline);
+  opacity: 0.35;
+  transition: all var(--transition-fast);
+}
+th.sortable:hover .sort-icon {
+  opacity: 0.75;
+}
+.sort-icon.active {
+  color: var(--blue-600);
+  opacity: 1;
+}
+.sort-svg {
+  display: inline-block;
+  vertical-align: middle;
+}
 .ticket-row { transition: all var(--transition-fast); }
 .ticket-row:hover { background: var(--surface-container); }
 .ticket-row td {
