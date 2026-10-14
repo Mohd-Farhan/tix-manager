@@ -1,0 +1,127 @@
+# ==============================================================================
+# TixManager — Multi-Agent Enterprise Customer Support Platform
+# Local & Staging Multi-Container Orchestration (Docker Compose)
+# ==============================================================================
+#
+# QUICK START GUIDE:
+# 1. Start all services in the background:
+#      docker compose up -d --build
+#
+# 2. View live logs from all containers:
+#      docker compose logs -f
+#
+# 3. View backend logs specifically:
+#      docker compose logs -f backend
+#
+# 4. Stop all running containers (preserving database data):
+#      docker compose down
+#
+# 5. Stop containers AND delete persistent database volumes (reset state):
+#      docker compose down -v
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Database Service: PostgreSQL 16 (COMMENTED OUT)
+  # ----------------------------------------------------------------------------
+  # REASON: Production database is hosted on Aiven (managed cloud PostgreSQL).
+  # The backend connects to Aiven via DB_URL environment variable, so a local
+  # PostgreSQL container is not needed.
+  #
+  # UNCOMMENT THIS BLOCK if you ever need a fully offline local development
+  # environment without depending on the Aiven cloud database.
+  # ----------------------------------------------------------------------------
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: tixmanager-postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: tixmanager
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres -d tixmanager"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   networks:
+  #     - tixmanager-net
+
+  # ----------------------------------------------------------------------------
+  # Backend Service: Spring Boot Monolith (TixManager API)
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tixmanager-backend
+    restart: unless-stopped
+    # NOTE: If you uncomment the postgres service above, re-enable this block
+    # to ensure backend waits for the local database to be ready:
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    ports:
+      # Maps host port 8080 to container port 8080
+      - "8080:8080"
+    environment:
+      # Activates Spring 'local' profile so the container loads application-local.properties,
+      # which contains Aiven DB credentials. Remove this in cloud/production deployments
+      # where DB_URL, DB_USERNAME, DB_PASSWORD are supplied via platform environment variables.
+      SPRING_PROFILES_ACTIVE: local
+
+      # Database connection — used in cloud/production when 'local' profile is NOT active.
+      # When SPRING_PROFILES_ACTIVE=local, these are ignored because application-local.properties
+      # overrides them with Aiven credentials.
+      DB_URL: ${DB_URL:-jdbc:postgresql://localhost:5432/tixmanager}
+      DB_DRIVER: org.postgresql.Driver
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+
+      # JWT Secret Key (Override with strong 256-bit secret in cloud production)
+      JWT_SECRET: ${JWT_SECRET:-9a4f2c8d3b7a1e5f8c6b2d4a7e9f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f}
+
+      # CORS Allowed Origins (Permits local Angular development servers)
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://127.0.0.1:4200}
+
+      # File attachment storage directory inside the container
+      STORAGE_TYPE: local
+      STORAGE_BASE_DIR: /app/uploads/attachments
+
+      # Observability & OpenAPI documentation flags
+      SWAGGER_UI_ENABLED: "true"
+      SWAGGER_API_DOCS_ENABLED: "true"
+    volumes:
+      # Persistent volume for uploaded ticket attachments and screenshots
+      - attachment_data:/app/uploads/attachments
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks:
+      - tixmanager-net
+
+# ------------------------------------------------------------------------------
+# Persistent Storage Volumes
+# ------------------------------------------------------------------------------
+volumes:
+  # NOTE: Uncomment postgres_data if you re-enable the local postgres service above.
+  # postgres_data:
+  #   name: tixmanager_postgres_data
+  attachment_data:
+    name: tixmanager_attachment_data
+
+# ------------------------------------------------------------------------------
+# Isolated Bridge Network
+# ------------------------------------------------------------------------------
+networks:
+  tixmanager-net:
+    name: tixmanager-net
+    driver: bridge

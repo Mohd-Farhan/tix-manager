@@ -1,0 +1,46 @@
+# ==============================================================================
+# .dockerignore — TixManager Docker Build Context Exclusions
+# ==============================================================================
+# Files and directories listed here will NOT be sent to the Docker daemon.
+# This dramatically speeds up 'docker build' and prevents secrets or local cache
+# from accidentally leaking into container layers.
+# ==============================================================================
+
+# Version Control
+.git/
+.gitignore
+
+# IDE & Editor Configurations
+.vscode/
+.idea/
+*.iml
+.agents/
+
+# Local Maven & Build Outputs (The Dockerfile builds its own JAR inside container)
+target/
+*.class
+
+# Logs & Temporary Files
+logs/
+*.log
+*.tmp
+*.bak
+
+# Local File Storage / Uploads (Mount via Docker volumes instead)
+uploads/
+path/
+
+# Angular Frontend (Only relevant if building separate frontend image)
+frontend/node_modules/
+frontend/.angular/
+frontend/dist/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+desktop.ini
