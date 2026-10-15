@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -13,7 +13,15 @@ export class TicketService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/api/tickets`;
 
-  // UI / Reactive events
+  // ── Reactive State (Signal-based) ──────────────────────────────
+  // Cached ticket list that components can read without re-fetching.
+  // Mutations (create, update, assign, delete) automatically update the cache.
+  private readonly ticketsSignal = signal<Ticket[]>([]);
+  readonly tickets = this.ticketsSignal.asReadonly();
+  readonly ticketCount = computed(() => this.ticketsSignal().length);
+
+  // ── Event Streams (Subject-based) ─────────────────────────────
+  // One-shot notifications for components that need to react to specific events.
   private ticketCreatedSubject = new Subject<Ticket>();
   ticketCreated$ = this.ticketCreatedSubject.asObservable();
 
@@ -28,12 +36,18 @@ export class TicketService {
   }
 
   notifyTicketCreated(ticket: Ticket): void {
+    this.ticketsSignal.update(list => [ticket, ...list]);
     this.ticketCreatedSubject.next(ticket);
   }
 
   notifyTicketUpdated(ticket: Ticket): void {
+    this.ticketsSignal.update(list =>
+      list.map(t => t.id === ticket.id ? ticket : t)
+    );
     this.ticketUpdatedSubject.next(ticket);
   }
+
+  // ── API Methods (with cache sync) ─────────────────────────────
 
   createTicket(data: { title: string; description: string; priority: TicketPriority; customerId?: number }): Observable<Ticket> {
     return this.http.post<Ticket>(this.apiUrl, data).pipe(
@@ -42,7 +56,9 @@ export class TicketService {
   }
 
   getTicketsForUser(userId: number): Observable<Ticket[]> {
-    return this.http.get<Ticket[]>(`${this.apiUrl}/user/${userId}`);
+    return this.http.get<Ticket[]>(`${this.apiUrl}/user/${userId}`).pipe(
+      tap(tickets => this.ticketsSignal.set(tickets))
+    );
   }
 
   getTicketsForUserPaged(userId: number, page: number = 0, size: number = 20, sort: string = 'createdAt,desc'): Observable<PageResponse<Ticket>> {
@@ -50,7 +66,9 @@ export class TicketService {
   }
 
   getAllTickets(): Observable<Ticket[]> {
-    return this.http.get<Ticket[]>(this.apiUrl);
+    return this.http.get<Ticket[]>(this.apiUrl).pipe(
+      tap(tickets => this.ticketsSignal.set(tickets))
+    );
   }
 
   getAllTicketsPaged(page: number = 0, size: number = 20, sort: string = 'createdAt,desc', slaStatus?: string): Observable<PageResponse<Ticket>> {
@@ -95,31 +113,31 @@ export class TicketService {
 
   autoAssignAll(strategy: RoutingStrategyType | string = RoutingStrategyType.WORKLOAD_BALANCED): Observable<Ticket[]> {
     return this.http.post<Ticket[]>(`${this.apiUrl}/auto-assign-all?strategy=${strategy}`, {}).pipe(
-      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
+      tap((tickets) => this.applyBatchUpdate(tickets))
     );
   }
 
   autoAssignAllUnassigned(strategy: RoutingStrategyType | string = RoutingStrategyType.WORKLOAD_BALANCED): Observable<Ticket[]> {
     return this.http.post<Ticket[]>(`${this.apiUrl}/auto-assign-unassigned?strategy=${strategy}`, {}).pipe(
-      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
+      tap((tickets) => this.applyBatchUpdate(tickets))
     );
   }
 
   batchAutoAssign(ticketIds: number[], strategy: RoutingStrategyType | string = RoutingStrategyType.WORKLOAD_BALANCED): Observable<Ticket[]> {
     return this.http.post<Ticket[]>(`${this.apiUrl}/batch-auto-assign?strategy=${strategy}`, ticketIds).pipe(
-      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
+      tap((tickets) => this.applyBatchUpdate(tickets))
     );
   }
 
   batchUnassign(ticketIds: number[]): Observable<Ticket[]> {
     return this.http.post<Ticket[]>(`${this.apiUrl}/batch-unassign`, ticketIds).pipe(
-      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
+      tap((tickets) => this.applyBatchUpdate(tickets))
     );
   }
 
   batchAssign(ticketIds: number[], agentId: number): Observable<Ticket[]> {
     return this.http.post<Ticket[]>(`${this.apiUrl}/batch-assign?agentId=${agentId}`, ticketIds).pipe(
-      tap(() => this.ticketUpdatedSubject.next({} as Ticket))
+      tap((tickets) => this.applyBatchUpdate(tickets))
     );
   }
 
@@ -143,11 +161,28 @@ export class TicketService {
 
   softDeleteTicket(ticketId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${ticketId}`).pipe(
-      tap(() => this.ticketUpdatedSubject.next({ id: ticketId } as Ticket))
+      tap(() => {
+        this.ticketsSignal.update(list => list.filter(t => t.id !== ticketId));
+        this.ticketUpdatedSubject.next({ id: ticketId } as Ticket);
+      })
     );
   }
 
   getAllTicketsAdmin(): Observable<Ticket[]> {
-    return this.http.get<Ticket[]>(`${this.apiUrl}/admin/all`);
+    return this.http.get<Ticket[]>(`${this.apiUrl}/admin/all`).pipe(
+      tap(tickets => this.ticketsSignal.set(tickets))
+    );
+  }
+
+  // ── Private Helpers ───────────────────────────────────────────
+
+  /** Merges batch mutation results into the cached ticket list. */
+  private applyBatchUpdate(updatedTickets: Ticket[]): void {
+    if (!updatedTickets?.length) return;
+    const updatedMap = new Map(updatedTickets.map(t => [t.id, t]));
+    this.ticketsSignal.update(list =>
+      list.map(t => updatedMap.get(t.id) ?? t)
+    );
+    this.ticketUpdatedSubject.next({} as Ticket);
   }
 }
