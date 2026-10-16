@@ -7,8 +7,10 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   template: `
     @if (visible) {
-    <div class="confirm-overlay" (click)="onCancel()">
-      <div class="confirm-modal" (click)="$event.stopPropagation()">
+    <div class="confirm-overlay" (click)="onCancel()"
+         animate.enter="anim-overlay-in" animate.leave="anim-overlay-out">
+      <div class="confirm-modal" (click)="$event.stopPropagation()"
+           animate.enter="anim-scale-in" animate.leave="anim-scale-out">
         <div class="confirm-content">
           <div class="confirm-icon" [ngClass]="variant">
             @if (variant === 'danger') {

@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="empty-state">
+    <div class="empty-state" animate.enter="anim-slide-up">
       <div class="empty-icon" [innerHTML]="icon"></div>
       <h3>{{ title }}</h3>
       <p>{{ description }}</p>

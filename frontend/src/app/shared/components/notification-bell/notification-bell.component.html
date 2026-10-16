@@ -22,7 +22,8 @@
 
   <!-- Glassmorphism Dropdown Popover -->
   @if (isOpen()) {
-    <div class="notification-popover" role="region" aria-label="Notifications panel" (click)="$event.stopPropagation()">
+    <div class="notification-popover" role="region" aria-label="Notifications panel" (click)="$event.stopPropagation()"
+         animate.enter="anim-scale-in" animate.leave="anim-scale-out">
       <!-- Popover Header -->
       <div class="popover-header">
         <div class="header-title-row">

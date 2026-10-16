@@ -7,8 +7,10 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   template: `
     @if (visible) {
-    <div class="modal-overlay" (click)="onClose()">
-      <div class="modal-window" [class]="sizeClass" (click)="$event.stopPropagation()">
+    <div class="modal-overlay" (click)="onClose()"
+         animate.enter="anim-overlay-in" animate.leave="anim-overlay-out">
+      <div class="modal-window" [class]="sizeClass" (click)="$event.stopPropagation()"
+           animate.enter="anim-scale-in" animate.leave="anim-scale-out">
         <div class="modal-header">
           <div class="modal-title-group">
             @if (icon) {

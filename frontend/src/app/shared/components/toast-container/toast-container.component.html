@@ -1,6 +1,7 @@
 <div class="toast-viewport" aria-live="polite" aria-atomic="true">
   @for (toast of toasts(); track toast.id) {
-    <div class="toast-card" [ngClass]="'toast-' + toast.type" role="alert">
+    <div class="toast-card" [ngClass]="'toast-' + toast.type" role="alert"
+         animate.enter="anim-toast-in" animate.leave="anim-toast-out">
       <div class="toast-icon-wrapper">
         @if (toast.type === 'success') {
           <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
