@@ -39,6 +39,11 @@ frontend/dist/
 .env
 .env.*
 !.env.example
+application-local.properties
+application-local.yml
+**/application-local.properties
+**/application-local.yml
+
 
 # OS Generated Files
 .DS_Store
