@@ -41,7 +41,7 @@ public class SecurityConfig {
      * OWASP / SOC2: Externalized allowed origins preventing unauthorized Cross-Origin requests.
      * Can be set via environment variable CORS_ALLOWED_ORIGINS=https://app.tixmanager.com in production.
      */
-    @Value("${cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
+    @Value("${cors.allowed-origins:http://localhost:*,http://127.0.0.1:*,https://*.onrender.com}")
     private String allowedOrigins;
 
     @Bean
